@@ -2,6 +2,7 @@
 import { SYSTEM_MESSAGE } from './system-message';
 
 export const runtime = 'edge';
+export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
   const { messages } = await req.json();

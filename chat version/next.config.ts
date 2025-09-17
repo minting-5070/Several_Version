@@ -5,6 +5,10 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  // Optimize for Vercel deployment
+  serverExternalPackages: ['openai'],
+  // Handle trailing slashes
+  trailingSlash: false,
 };
 
 export default nextConfig;
