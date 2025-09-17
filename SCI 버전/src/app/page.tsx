@@ -95,7 +95,7 @@ export default function Home() {
               <div>
                 <h1 className="text-xl font-bold tracking-tight">Research Assistant</h1>
                 <div className="text-xs text-muted-foreground">
-                  <span>Developed for researchers — specialized in academic literature discovery</span>
+                  <span>Powered by AI</span>
                 </div>
               </div>
             </div>

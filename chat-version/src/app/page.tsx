@@ -94,7 +94,7 @@ export default function Home() {
               <div>
                 <h1 className="text-xl font-bold tracking-tight">General Assistant</h1>
                 <div className="text-xs text-muted-foreground">
-                  <span>AI-powered assistant</span>
+                  <span>Powered by AI</span>
                 </div>
               </div>
             </div>
