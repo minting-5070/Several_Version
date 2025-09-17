@@ -1,7 +1,8 @@
 {
-  "buildCommand": "cd ./sci-version && npm run build",
-  "outputDirectory": "./sci-version/.next",
-  "installCommand": "cd ./sci-version && npm ci",
-  "devCommand": "cd ./sci-version && npm run dev",
-  "framework": "nextjs"
+  "buildCommand": "npm run build",
+  "outputDirectory": ".next",
+  "installCommand": "npm ci",
+  "devCommand": "npm run dev",
+  "framework": "nextjs",
+  "rootDirectory": "sci-version"
 }
