@@ -4,14 +4,14 @@
   "description": "Multiple versions of chat applications",
   "private": true,
   "scripts": {
-    "build": "cd ./SCI\\ 버전 && npm run build",
-    "dev": "cd ./SCI\\ 버전 && npm run dev",
-    "start": "cd ./SCI\\ 버전 && npm run start",
-    "install": "cd ./SCI\\ 버전 && npm ci"
+    "build": "cd ./sci-version && npm run build",
+    "dev": "cd ./sci-version && npm run dev",
+    "start": "cd ./sci-version && npm run start",
+    "install": "cd ./sci-version && npm ci"
   },
   "workspaces": [
     "chat-version",
     "chat-version-API",
-    "SCI 버전"
+    "sci-version"
   ]
 }
