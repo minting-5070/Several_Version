@@ -59,7 +59,8 @@ export default function RootLayout({
                   value: Math.round(timeSpent / 1000), // seconds
                   session_id: sessionId,
                   timestamp: new Date().toISOString(),
-                  total_active_time: Math.round(totalActiveTime / 1000)
+                  total_active_time: Math.round(totalActiveTime / 1000),
+                  app_version: 'chat-version-api'
                 });
               }
               
