@@ -7,7 +7,7 @@
     "build": "cd ./sci-version && npm run build",
     "dev": "cd ./sci-version && npm run dev",
     "start": "cd ./sci-version && npm run start",
-    "install": "cd ./sci-version && npm ci"
+    "install": "cd ./sci-version && npm install"
   },
   "workspaces": [
     "chat-version",
