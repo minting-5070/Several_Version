@@ -3,6 +3,5 @@
   "outputDirectory": ".next",
   "installCommand": "npm ci",
   "devCommand": "npm run dev",
-  "framework": "nextjs",
-  "rootDirectory": "sci-version"
+  "framework": "nextjs"
 }
