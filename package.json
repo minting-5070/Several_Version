@@ -1,0 +1,16 @@
+{
+  "name": "several-version",
+  "version": "1.0.0",
+  "description": "Multiple versions of chat applications",
+  "private": true,
+  "scripts": {
+    "build": "cd chat-version && npm run build",
+    "dev": "cd chat-version && npm run dev",
+    "start": "cd chat-version && npm run start"
+  },
+  "workspaces": [
+    "chat-version",
+    "chat-version-API",
+    "SCI 버전"
+  ]
+}
