@@ -1,7 +1,7 @@
 {
-  "buildCommand": "cd ./chat-version && npm run build",
-  "outputDirectory": "./chat-version/.next",
-  "installCommand": "cd ./chat-version && npm ci",
-  "devCommand": "cd ./chat-version && npm run dev",
+  "buildCommand": "cd ./SCI\\ 버전 && npm run build",
+  "outputDirectory": "./SCI\\ 버전/.next",
+  "installCommand": "cd ./SCI\\ 버전 && npm ci",
+  "devCommand": "cd ./SCI\\ 버전 && npm run dev",
   "framework": "nextjs"
 }
