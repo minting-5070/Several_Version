@@ -8,10 +8,5 @@
     "dev": "cd ./sci-version && npm run dev",
     "start": "cd ./sci-version && npm run start",
     "install": "cd ./sci-version && npm install"
-  },
-  "workspaces": [
-    "chat-version",
-    "chat-version-API",
-    "sci-version"
-  ]
+  }
 }
