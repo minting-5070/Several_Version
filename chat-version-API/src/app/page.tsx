@@ -14,7 +14,24 @@ export default function Home() {
     handleSubmit,
     setMessages,
     isLoading,
-  } = useChat({ streamProtocol: 'text' });
+  } = useChat({
+    streamProtocol: 'text',
+    body: typeof window === 'undefined' ? {} : {
+      sessionId: ((): string => {
+        try {
+          const existing = localStorage.getItem('ra_session_id');
+          if (existing) return existing;
+          const created = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+          localStorage.setItem('ra_session_id', created);
+          return created;
+        } catch { return Math.random().toString(36).slice(2); }
+      })(),
+      prolificId: ((): string => {
+        try { return localStorage.getItem('prolific_id') || ''; } catch { return ''; }
+      })(),
+      appVersion: 'chat-version-api'
+    }
+  });
   
   const [displayMessages, setDisplayMessages] = useState(messages);
   const [isThinking, setIsThinking] = useState(false);
@@ -81,6 +98,73 @@ export default function Home() {
     setIsThinking(false);
   };
   
+  // Helpers for analytics
+  const getSessionId = () => {
+    try {
+      const existing = typeof window !== 'undefined' ? localStorage.getItem('ra_session_id') : '';
+      if (existing) return existing;
+      const created = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+      if (typeof window !== 'undefined') localStorage.setItem('ra_session_id', created);
+      return created;
+    } catch {
+      return Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    }
+  };
+  const getProlificId = () => {
+    try { return typeof window !== 'undefined' ? (localStorage.getItem('prolific_id') || '') : ''; } catch { return ''; }
+  };
+
+  // 생성 중에는 새 프롬프트 전송 금지
+  const handleSubmitGuarded = (e: React.FormEvent<HTMLFormElement>) => {
+    if (isLoading) {
+      e.preventDefault();
+      return;
+    }
+    try {
+      const q = (input || '').trim();
+      const sessionId = getSessionId();
+      const prolific = getProlificId();
+      (window as any).dataLayer = (window as any).dataLayer || [];
+      (window as any).dataLayer.push({
+        event: 'chat_question_submitted',
+        session_id: sessionId,
+        user_id: prolific || undefined,
+        prolific_id: prolific || undefined,
+        question_text: q.length > 500 ? q.slice(0, 500) : q,
+        question_length: q.length,
+        timestamp: new Date().toISOString(),
+        app_version: 'chat-version-api'
+      });
+    } catch {}
+    handleSubmit(e);
+  };
+
+  // Emit event when a new assistant answer arrives
+  const lastAnswerIdRef = useRef<string>('');
+  useEffect(() => {
+    if (isLoading) return;
+    const last = messages[messages.length - 1];
+    if (!last || last.role !== 'assistant') return;
+    if (last.id === lastAnswerIdRef.current) return;
+    lastAnswerIdRef.current = last.id;
+    try {
+      const answer = (last.content || '').trim();
+      const sessionId = getSessionId();
+      const prolific = getProlificId();
+      (window as any).dataLayer = (window as any).dataLayer || [];
+      (window as any).dataLayer.push({
+        event: 'chat_answer_received',
+        session_id: sessionId,
+        user_id: prolific || undefined,
+        prolific_id: prolific || undefined,
+        answer_excerpt: answer.length > 500 ? answer.slice(0, 500) : answer,
+        answer_length: answer.length,
+        timestamp: new Date().toISOString(),
+        app_version: 'chat-version-api'
+      });
+    } catch {}
+  }, [messages, isLoading]);
+  
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       {/* 헤더 */}
@@ -139,7 +223,7 @@ export default function Home() {
                 <ChatInput
                   input={input}
                   handleInputChange={handleInputChange}
-                  handleSubmit={handleSubmit}
+                  handleSubmit={handleSubmitGuarded}
                   isLoading={isLoading}
                 />
               </div>
@@ -163,7 +247,7 @@ export default function Home() {
                             <div className="w-2 h-2 bg-current rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
                           </div>
                         <span className="text-sm text-muted-foreground ml-2">
-                          {phase === 'searching' ? 'Searching the web… Please wait.' : 'Generating the answer…'}
+                          {phase === 'searching' ? 'Searching the literature…' : 'Generating the answer…'}
                         </span>
                       </div>
                     </div>
@@ -176,7 +260,7 @@ export default function Home() {
             <ChatInput
               input={input}
               handleInputChange={handleInputChange}
-              handleSubmit={handleSubmit}
+              handleSubmit={handleSubmitGuarded}
               isLoading={isLoading}
             />
           </div>
