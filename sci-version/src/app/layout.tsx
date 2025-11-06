@@ -45,12 +45,31 @@ export default function RootLayout({
               let startTime = Date.now();
               let totalActiveTime = 0;
               let isVisible = !document.hidden;
-              let sessionId = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-              
+
               // Initialize dataLayer if not exists
               window.dataLayer = window.dataLayer || [];
-              
+
+              // Persisted session id shared across the app
+              function getOrCreateSessionId() {
+                try {
+                  const existing = localStorage.getItem('ra_session_id');
+                  if (existing) return existing;
+                  const created = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                  localStorage.setItem('ra_session_id', created);
+                  return created;
+                } catch (_) {
+                  return Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                }
+              }
+
+              function getProlificId() {
+                try { return localStorage.getItem('prolific_id') || ''; } catch (_) { return ''; }
+              }
+
+              const sessionId = getOrCreateSessionId();
+
               function sendTimeEvent(eventType, timeSpent) {
+                const prolificId = getProlificId();
                 window.dataLayer.push({
                   event: 'tab_engagement',
                   event_category: 'user_engagement',
@@ -58,17 +77,18 @@ export default function RootLayout({
                   event_label: 'active_time',
                   value: Math.round(timeSpent / 1000), // seconds
                   session_id: sessionId,
+                  user_id: prolificId || undefined,
+                  prolific_id: prolificId || undefined,
                   timestamp: new Date().toISOString(),
                   total_active_time: Math.round(totalActiveTime / 1000),
                   app_version: 'sci-version'
                 });
               }
-              
+
               function handleVisibilityChange() {
                 const currentTime = Date.now();
-                
+
                 if (document.hidden) {
-                  // Tab became hidden - stop counting
                   if (isVisible) {
                     const sessionTime = currentTime - startTime;
                     totalActiveTime += sessionTime;
@@ -76,7 +96,6 @@ export default function RootLayout({
                     isVisible = false;
                   }
                 } else {
-                  // Tab became visible - start counting
                   if (!isVisible) {
                     startTime = currentTime;
                     sendTimeEvent('tab_visible', 0);
@@ -84,17 +103,17 @@ export default function RootLayout({
                   }
                 }
               }
-              
+
               function sendPeriodicUpdate() {
                 if (!document.hidden) {
                   const currentTime = Date.now();
                   const currentSessionTime = currentTime - startTime;
                   const currentTotalTime = totalActiveTime + currentSessionTime;
-                  
+
                   sendTimeEvent('periodic_update', currentTotalTime);
                 }
               }
-              
+
               function sendFinalTime() {
                 if (!document.hidden) {
                   const currentTime = Date.now();
@@ -103,17 +122,12 @@ export default function RootLayout({
                 }
                 sendTimeEvent('session_end', totalActiveTime);
               }
-              
-              // Event listeners
+
               document.addEventListener('visibilitychange', handleVisibilityChange);
-              
-              // Send periodic updates every 30 seconds while tab is active
               setInterval(sendPeriodicUpdate, 30000);
-              
-              // Send final time on page unload
               window.addEventListener('beforeunload', sendFinalTime);
               window.addEventListener('pagehide', sendFinalTime);
-              
+
               // Initial event
               sendTimeEvent('session_start', 0);
             })();

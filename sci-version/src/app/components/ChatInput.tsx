@@ -35,7 +35,7 @@ export default function ChatInput({ input, handleInputChange, handleSubmit, isLo
               }
             }}
             disabled={isLoading}
-            placeholder="Enter a research question or topic — I will retrieve top papers and summarize 10 results."
+            placeholder="Enter a research question — I’ll find relevant published papers and summarize the top 10 into cards."
             className="w-full resize-none border-0 bg-transparent placeholder:text-muted-foreground focus:outline-none focus:ring-0 text-lg leading-relaxed max-h-40 overflow-y-auto"
             rows={2}
             style={{ minHeight: '56px' }}
