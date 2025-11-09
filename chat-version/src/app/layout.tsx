@@ -58,7 +58,7 @@ export default function RootLayout({
                 }
               }
               function getProlificId() {
-                try { return localStorage.getItem('prolific_id') || ''; } catch (_) { return ''; }
+                try { return localStorage.getItem('mturk_id') || ''; } catch (_) { return ''; }
               }
 
               const sessionId = getOrCreateSessionId();
@@ -74,7 +74,7 @@ export default function RootLayout({
                   value: Math.round(timeSpent / 1000),
                   session_id: sessionId,
                   user_id: prolificId || undefined,
-                  prolific_id: prolificId || undefined,
+                  mturk_id: prolificId || undefined,
                   timestamp: new Date().toISOString(),
                   total_active_time: Math.round(totalActiveTime / 1000),
                   app_version: 'chat-version'

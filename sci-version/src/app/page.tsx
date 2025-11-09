@@ -27,8 +27,8 @@ export default function Home() {
           return created;
         } catch { return Math.random().toString(36).slice(2); }
       })(),
-      prolificId: ((): string => {
-        try { return localStorage.getItem('prolific_id') || ''; } catch { return ''; }
+      mturkId: ((): string => {
+        try { return localStorage.getItem('mturk_id') || ''; } catch { return ''; }
       })(),
       appVersion: 'sci-version'
     }
@@ -39,8 +39,8 @@ export default function Home() {
   const [phase, setPhase] = useState<'idle' | 'searching' | 'generating'>('idle');
   const [markerDriven, setMarkerDriven] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [prolificId, setProlificId] = useState('');
-  const [prolificInput, setProlificInput] = useState('');
+  const [prolificId, setProlificId] = useState(''); // MTurk ID
+  const [prolificInput, setProlificInput] = useState(''); // MTurk ID input
   const [logoUrl, setLogoUrl] = useState<string>('/branding/genyva-logo.svg');
   const [inlineLogoReady, setInlineLogoReady] = useState<boolean>(false);
   
@@ -131,7 +131,7 @@ export default function Home() {
     }
   };
   const getProlificId = () => {
-    try { return typeof window !== 'undefined' ? (localStorage.getItem('prolific_id') || '') : ''; } catch { return ''; }
+    try { return typeof window !== 'undefined' ? (localStorage.getItem('mturk_id') || '') : ''; } catch { return ''; }
   };
   
   // 생성 중에는 새 프롬프트 전송 금지
@@ -165,7 +165,7 @@ export default function Home() {
     try {
       const qs = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
       const forceShow = qs?.get('showBanner') === '1';
-      const storedId = typeof window !== 'undefined' ? localStorage.getItem('prolific_id') : '';
+      const storedId = typeof window !== 'undefined' ? localStorage.getItem('mturk_id') : '';
       if (storedId) {
         setProlificId(storedId);
         setProlificInput(storedId);
@@ -183,9 +183,9 @@ export default function Home() {
     if (!id) return;
     try {
       if (typeof window !== 'undefined') {
-        localStorage.setItem('prolific_id', id);
+        localStorage.setItem('mturk_id', id);
         (window as any).dataLayer = (window as any).dataLayer || [];
-        (window as any).dataLayer.push({ event: 'prolific_id_set', prolific_id: id });
+        (window as any).dataLayer.push({ event: 'mturk_id_set', mturk_id: id });
       }
       localStorage.setItem('cvt_marketing_seen_ra_v2', '1');
     } catch {}
@@ -195,13 +195,13 @@ export default function Home() {
   const changeProlificId = () => {
     if (typeof window === 'undefined') return;
     // Simple prompt for quick editing; can be replaced with a styled dialog later
-    const next = window.prompt('Enter your Prolific ID', prolificId || '') || '';
+    const next = window.prompt('Enter your MTurk ID', prolificId || '') || '';
     const trimmed = next.trim();
     if (!trimmed) return;
     try {
-      localStorage.setItem('prolific_id', trimmed);
+      localStorage.setItem('mturk_id', trimmed);
       (window as any).dataLayer = (window as any).dataLayer || [];
-      (window as any).dataLayer.push({ event: 'prolific_id_set', prolific_id: trimmed });
+      (window as any).dataLayer.push({ event: 'mturk_id_set', mturk_id: trimmed });
     } catch {}
     setProlificId(trimmed);
   };
@@ -264,10 +264,10 @@ export default function Home() {
             <div className="flex items-center space-x-2">
               {prolificId ? (
                 <div className="px-2 py-1 rounded-md bg-muted text-xs text-foreground">
-                  Prolific ID: <span className="font-semibold">{prolificId}</span>
+                  MTurk ID: <span className="font-semibold">{prolificId}</span>
                 </div>
               ) : (
-                <button onClick={() => setShowNotice(true)} className="px-2 py-1 text-xs rounded-md bg-primary/10 text-primary hover:bg-primary/20">Set Prolific ID</button>
+                <button onClick={() => setShowNotice(true)} className="px-2 py-1 text-xs rounded-md bg-primary/10 text-primary hover:bg-primary/20">Set MTurk ID</button>
               )}
               <button onClick={changeProlificId} className="px-2 py-1 text-xs text-muted-foreground hover:text-foreground">Change</button>
               {displayMessages.length > 0 && (
@@ -318,11 +318,11 @@ export default function Home() {
                     <p className="mt-5 text-lg md:text-xl text-foreground">Genyva AI provides accurate literature discovery, summarization, and analysis with consistent standards — built for research.</p>
                   <div className="mt-7 flex items-center justify-end gap-3">
                     <div className="flex-1">
-                      <label className="block text-sm font-medium mb-2 text-foreground/90">Prolific ID</label>
+                      <label className="block text-sm font-medium mb-2 text-foreground/90">MTurk ID</label>
                       <input
                         value={prolificInput}
                         onChange={(e) => setProlificInput(e.target.value)}
-                        placeholder="Enter your Prolific ID"
+                        placeholder="Enter your MTurk ID"
                         className="w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
                       />
                       <p className="mt-2 text-xs text-muted-foreground">We’ll use this to distinguish users for analytics.</p>
