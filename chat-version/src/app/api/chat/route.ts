@@ -1,11 +1,13 @@
 // Edge runtime provides native fetch
-import { SYSTEM_MESSAGE } from './system-message';
+import { SYSTEM_MESSAGE, SMALL_TALK_MESSAGE } from './system-message';
+import { ALL_PAPERS, searchPapersByQuery, rankPapersByQuery, type PaperRecord } from '@/data/papers';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
-  const { messages } = await req.json();
+  const body = await req.json();
+  const { messages } = body as { messages: any[] };
 
   // 환경변수 디버깅
   const apiKey = process.env.OPENAI_API_KEY;
@@ -29,18 +31,67 @@ export async function POST(req: Request) {
     }
   }
 
+  // 최신 사용자 쿼리 추출 및 스몰토크 판별
+  const latestUser = [...mergedMessages].reverse().find((m: any) => m.role === 'user');
+  const query = String(latestUser?.content || '').slice(0, 2000);
+  const q = query.toLowerCase().trim();
+  const isSmallTalk = (
+    q.length <= 80 && (
+      /^\s*(hi|hello|hey|안녕|ㅎㅇ|헬로)\b/.test(q) ||
+      /(who\s+are\s+you|누구|너는\s*누구|what\s+are\s+you)/.test(q) ||
+      /(thanks|thank\s+you|고마워|감사)/.test(q) ||
+      /(bye|goodbye|잘가|감사합니다)/.test(q)
+    )
+  );
+
+  // 로컬 논문 후보 선정
+  let candidates = (query ? rankPapersByQuery(query) : []).slice(0, 20);
+  if (query && candidates.length === 0) {
+    candidates = searchPapersByQuery(query).slice(0, 20);
+  }
+
   const systemMessage = {
     role: 'system' as const,
-    content: SYSTEM_MESSAGE
+    content: isSmallTalk ? SMALL_TALK_MESSAGE : SYSTEM_MESSAGE
   };
 
-  const formattedInput = [
-    systemMessage,
-    ...mergedMessages.map((m: { role: string; content: string }) => ({
-      role: m.role,
-      content: m.content
-    }))
-  ];
+  const ensureTen = (arr: PaperRecord[]) => {
+    if (arr.length >= 10) return arr.slice(0, 10);
+    const need = 10 - arr.length;
+    const more = ALL_PAPERS.filter(p => !arr.includes(p)).slice(0, need);
+    return [...arr, ...more].slice(0, 10);
+  };
+  const selected = ensureTen(candidates);
+
+  const formattedInput = (() => {
+    if (!isSmallTalk) {
+      const localDbBlock = selected.map((p, i) => (
+        `${i + 1}. Title: ${p.title}\nAuthors: ${p.authors}\nYear: ${p.year} • Journal: ${p.journal}\nLink: ${p.link}\nAbstract: ${p.abstract}`
+      )).join('\n\n');
+
+      const localDbMessage = {
+        role: 'system' as const,
+        content: `LOCAL PAPERS DATABASE (Top candidates for this query):\n\n${localDbBlock}`
+      };
+
+      return [
+        systemMessage,
+        localDbMessage,
+        ...mergedMessages.map((m: { role: string; content: string }) => ({
+          role: m.role,
+          content: m.content
+        }))
+      ];
+    }
+
+    return [
+      systemMessage,
+      ...mergedMessages.map((m: { role: string; content: string }) => ({
+        role: m.role,
+        content: m.content
+      }))
+    ];
+  })();
 
   // 요청 헤더 구성 (조직/프로젝트 헤더는 선택)
   const headers: Record<string, string> = {
@@ -58,11 +109,6 @@ export async function POST(req: Request) {
     model: 'gpt-5-mini',
     // Responses API: specify text.format as an object
     text: { format: { type: 'text' } },
-    tools: [
-      {
-        type: 'web_search'
-      }
-    ],
     input: formattedInput
   } as const;
 
@@ -81,7 +127,7 @@ export async function POST(req: Request) {
     // 스트리밍이 제한된 경우 자동으로 비스트리밍 모드로 재시도
     const shouldRetryWithoutStream =
       errorText.includes('must be verified to stream') ||
-      errorText.includes('param') && errorText.includes('stream') ||
+      (errorText.includes('param') && errorText.includes('stream')) ||
       errorText.includes('unsupported_value');
 
     if (shouldRetryWithoutStream) {
@@ -155,13 +201,10 @@ export async function POST(req: Request) {
     });
   }
 
-  // 스트리밍 응답 처리
+  // 스트리밍 응답 처리 (간소화)
   const encoder = new TextEncoder();
   const decoder = new TextDecoder();
-  const collectedAnnotations: any[] = [];
   let remainder = '';
-  let searchMarkerSent = false;
-  let generatingMarkerSent = false;
 
   const transformStream = new TransformStream({
     transform(chunk, controller) {
@@ -179,227 +222,43 @@ export async function POST(req: Request) {
             const jsonStr = line.slice(5).trimStart();
             const event = JSON.parse(jsonStr);
 
-            // Debug: responses API 구조 확인
-            console.log('Responses API event:', JSON.stringify(event, null, 2));
-
-            // Emit searching marker as soon as any web_search tool activity is observed
-            if (!searchMarkerSent) {
-              const typeStr = typeof event?.type === 'string' ? event.type : '';
-              const hasSearchSignal =
-                (typeStr.includes('tool') || typeStr.includes('tool_call')) &&
-                (jsonStr.includes('"web_search"') || jsonStr.includes('web_search'));
-              if (hasSearchSignal) {
-                controller.enqueue(encoder.encode('<!--SEARCHING-->'));
-                searchMarkerSent = true;
-              }
-            }
-
-            // responses API 이벤트 기반 처리
             if (event.type === 'response.output_text.delta' && event.delta) {
               controller.enqueue(encoder.encode(event.delta));
             }
-            // 대안적인 구조들도 확인
             else if (event.delta?.content) {
               controller.enqueue(encoder.encode(event.delta.content));
             }
             else if (event.content) {
               controller.enqueue(encoder.encode(event.content));
             }
-            // 기존 chat completions 구조도 유지 (호환성)
             else if (event.choices?.[0]?.delta?.content) {
               controller.enqueue(encoder.encode(event.choices[0].delta.content));
             }
 
-            // 웹 검색 결과 및 annotations 처리 (responses API 구조)
-            if (event.type === 'response.tool_calls.delta' && event.tool_calls) {
-              // 웹 검색 도구 호출 결과 처리
-              for (const toolCall of event.tool_calls) {
-                if (toolCall.type === 'web_search' && toolCall.web_search?.results) {
-                  if (!searchMarkerSent) {
-                    // Invisible HTML comment marker for client-side status detection
-                    controller.enqueue(encoder.encode('<!--SEARCHING-->'));
-                    searchMarkerSent = true;
-                  }
-                  for (const result of toolCall.web_search.results) {
-                    if (result.url && result.title) {
-                      collectedAnnotations.push({
-                        type: 'url_citation',
-                        url_citation: {
-                          url: result.url,
-                          title: result.title
-                        }
-                      });
-                    }
-                  }
-                }
-              }
-            }
-            
-            // annotations 처리 (responses API 구조)
-            if (event.annotations && Array.isArray(event.annotations)) {
-              collectedAnnotations.push(...event.annotations);
-            }
-            // 기존 구조도 유지
-            else if (event.choices?.[0]?.message?.annotations) {
-              collectedAnnotations.push(...event.choices[0].message.annotations);
-            }
-            else if (event.choices?.[0]?.delta?.annotations) {
-              collectedAnnotations.push(...event.choices[0].delta.annotations);
-            }
-
-          } catch (e) {
-            console.log('JSON parse error:', e instanceof Error ? e.message : 'Unknown error', 'Line:', line);
+          } catch {
+            // ignore parse errors
           }
         }
       }
     },
 
     flush(controller) {
-      // Right before finishing, indicate generation phase briefly
-      if (!generatingMarkerSent) {
-        controller.enqueue(encoder.encode('<!--GENERATING-->'));
-        generatingMarkerSent = true;
-      }
       if (remainder.startsWith('data:')) {
         try {
           const event = JSON.parse(remainder.slice(5).trimStart());
-          
-          // responses API 이벤트 기반 처리
           if (event.type === 'response.output_text.delta' && event.delta) {
             controller.enqueue(encoder.encode(event.delta));
           }
-          // 대안적인 구조들도 확인
           else if (event.delta?.content) {
             controller.enqueue(encoder.encode(event.delta.content));
           }
           else if (event.content) {
             controller.enqueue(encoder.encode(event.content));
           }
-          // 기존 chat completions 구조도 유지
           else if (event.choices?.[0]?.delta?.content) {
             controller.enqueue(encoder.encode(event.choices[0].delta.content));
           }
-          
-          // 웹 검색 결과 및 annotations 처리
-          if (event.type === 'response.tool_calls.delta' && event.tool_calls) {
-            // 웹 검색 도구 호출 결과 처리
-            for (const toolCall of event.tool_calls) {
-              if (toolCall.type === 'web_search' && toolCall.web_search?.results) {
-                if (!searchMarkerSent) {
-                  controller.enqueue(encoder.encode('<!--SEARCHING-->'));
-                  searchMarkerSent = true;
-                }
-                for (const result of toolCall.web_search.results) {
-                  if (result.url && result.title) {
-                    collectedAnnotations.push({
-                      type: 'url_citation',
-                      url_citation: {
-                        url: result.url,
-                        title: result.title
-                      }
-                    });
-                  }
-                }
-              }
-            }
-          }
-          
-          // annotations 처리
-          if (event.annotations && Array.isArray(event.annotations)) {
-            collectedAnnotations.push(...event.annotations);
-          }
-          else if (event.choices?.[0]?.message?.annotations) {
-            collectedAnnotations.push(...event.choices[0].message.annotations);
-          }
-          else if (event.choices?.[0]?.delta?.annotations) {
-            collectedAnnotations.push(...event.choices[0].delta.annotations);
-          }
-        } catch (e) {
-          // ignore parse errors
-        }
-      }
-
-      // Process citations
-      const unique: { url: string; title: string }[] = [];
-
-      if (collectedAnnotations.length > 0) {
-        for (const annotation of collectedAnnotations) {
-          if (annotation.type === 'url_citation' && annotation.url_citation) {
-            const { url, title } = annotation.url_citation;
-            if (!url) continue;
-            // Filter out Korean sites
-            if (url.includes('.kr') || url.includes('naver.com') || url.includes('daum.net') || 
-                url.includes('chosun.com') || url.includes('joongang.co.kr')) {
-              continue;
-            }
-            if (unique.some((u) => u.url === url)) continue;
-            unique.push({ url, title: title || url });
-          }
-        }
-      }
-
-      if (unique.length > 0) {
-        // Filter for TOP-TIER academic sites only
-        const topTierSites = [
-          // Top Science Journals
-          'nature.com', 'science.org', 'cell.com', 'nejm.org', 'thelancet.com', 'pnas.org',
-          // Preprint servers
-          'arxiv.org', 'biorxiv.org', 'medrxiv.org',
-          // Academic databases
-          'pubmed', 'doi.org', 'ieee.org', 'acm.org',
-          // Top publishers
-          'springer.com', 'wiley.com', 'elsevier.com', 'oxford', 'cambridge',
-          // Business journals
-          'journals.aom.org', 'onlinelibrary.wiley.com', 'informs.org',
-          // University sites
-          '.edu'
-        ];
-        
-        const validCitations = unique.filter(c => {
-          // Exclude Korean sites
-          if (c.url.includes('.kr') || c.url.includes('naver.com') || 
-              c.url.includes('daum.net') || c.url.includes('chosun.com') || 
-              c.url.includes('joongang.co.kr')) {
-            return false;
-          }
-          
-          // Only include top-tier academic sites
-          return topTierSites.some(site => c.url.includes(site));
-        });
-
-        // 모든 웹 검색 결과 표시 (학술 사이트 우선, 일반 사이트도 포함)
-        const allValidCitations = unique.filter(c => {
-          // 한국 사이트만 제외
-          return !(c.url.includes('.kr') || c.url.includes('naver.com') || 
-                   c.url.includes('daum.net') || c.url.includes('chosun.com') || 
-                   c.url.includes('joongang.co.kr'));
-        });
-
-        if (allValidCitations.length > 0) {
-          // 학술 사이트와 일반 사이트 분리
-          const academicCitations = allValidCitations.filter(c => 
-            topTierSites.some(site => c.url.includes(site))
-          );
-          const generalCitations = allValidCitations.filter(c => 
-            !topTierSites.some(site => c.url.includes(site))
-          );
-
-          let citationsText = '';
-          
-          if (academicCitations.length > 0) {
-            const academicLines = academicCitations.map((c, idx) => `- [${idx + 1}] ${c.title ? `[${c.title}](${c.url})` : c.url}`);
-            citationsText += `\n\n📚 **Academic References:**\n${academicLines.join('\n')}`;
-          }
-          
-          if (generalCitations.length > 0) {
-            const generalLines = generalCitations.map((c, idx) => `- [${idx + academicCitations.length + 1}] ${c.title ? `[${c.title}](${c.url})` : c.url}`);
-            citationsText += `\n\n🔍 **Web Search Results:**\n${generalLines.join('\n')}`;
-          }
-          
-          if (citationsText) {
-            controller.enqueue(encoder.encode(citationsText));
-          }
-        }
+        } catch {}
       }
     },
   });

@@ -9,10 +9,10 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "General Assistant",
-  description: "AI-powered general assistant ready to help with questions, tasks, explanations, and whatever you need assistance with",
-  keywords: ["AI", "assistant", "General Assistant", "help", "questions", "tasks", "chatbot"],
-  authors: [{ name: "General Assistant" }],
+  title: "Research Assistant",
+  description: "AI-powered research assistant for literature discovery, summarization, and analysis with consistent standards",
+  keywords: ["AI", "assistant", "Research Assistant", "literature", "summarization", "analysis"],
+  authors: [{ name: "Research Assistant" }],
   robots: "index, follow",
 };
 

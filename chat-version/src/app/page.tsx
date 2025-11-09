@@ -123,13 +123,13 @@ export default function Home() {
       const STORAGE_KEY = 'cvt_marketing_seen_chat_v2';
       const qs = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
       const forceShow = qs?.get('showBanner') === '1';
-      const seen = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : '1';
       const storedId = typeof window !== 'undefined' ? localStorage.getItem('prolific_id') : '';
       if (storedId) {
         setProlificId(storedId);
         setProlificInput(storedId);
       }
-      if (forceShow || !seen || !storedId) setShowNotice(true);
+      // Align behavior with sci-version: show when no Prolific ID or when forced
+      if (forceShow || !storedId) setShowNotice(true);
     } catch {}
   }, []);
   const dismissNotice = () => {
@@ -309,9 +309,8 @@ export default function Home() {
                         )}
                         <span className="block text-2xl md:text-3xl font-semibold text-foreground/90">The general‑purpose assistant</span>
                       </h2>
-                      <button onClick={dismissNotice} className="text-muted-foreground hover:text-foreground">✕</button>
                     </div>
-                    <p className="mt-5 text-lg md:text-xl text-foreground">Genyva AI delivers accurate answers and crisp explanations by efficiently leveraging GenAI—built for work, study, and everyday tasks.</p>
+                    <p className="mt-5 text-lg md:text-xl text-foreground">Genyva AI provides accurate, crisp answers for work, study, and everyday tasks.</p>
                     <div className="mt-7 flex items-center justify-end gap-3">
                       <div className="flex-1">
                         <label className="block text-sm font-medium mb-2 text-foreground/90">Prolific ID</label>
@@ -346,7 +345,9 @@ export default function Home() {
               <h1 className="text-4xl font-bold mb-4 text-foreground tracking-tight">
                 Genyva AI
               </h1>
-              {/* badge removed per request */}
+              <div className="flex items-center justify-center gap-2 mb-4">
+                <span className="px-2 py-1 bg-primary/10 text-primary text-sm font-semibold rounded-lg">Genyva Pro</span>
+              </div>
               <p className="text-lg text-muted-foreground mb-12">
                 Ask me anything! I'm here to help with questions, tasks, explanations, and whatever you need assistance with.
               </p>

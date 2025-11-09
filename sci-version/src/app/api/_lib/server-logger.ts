@@ -15,6 +15,8 @@ export type ChatLogEnd = {
   tsEndIso: string;
 };
 
+const DEBUG = (process.env.ENABLE_LOG_DEBUG || '').toString() === '1';
+
 function supabaseHeaders() {
   const apiKey = process.env.SUPABASE_SERVICE_ROLE;
   return {
@@ -35,7 +37,7 @@ export async function logChatStart(row: ChatLogStart) {
   try {
     const url = supabaseUrl('/rest/v1/chat_logs');
     if (!url) return; // logging disabled if not configured
-    await fetch(url, {
+    const res = await fetch(url, {
       method: 'POST',
       headers: supabaseHeaders(),
       body: JSON.stringify({
@@ -48,8 +50,19 @@ export async function logChatStart(row: ChatLogStart) {
         ts_start: row.tsStartIso,
       })
     });
+    if (DEBUG) {
+      if (!res.ok) {
+        const txt = await res.text().catch(()=>'');
+        console.log('[chat-logger] start failed', res.status, txt.slice(0, 500));
+      } else {
+        console.log('[chat-logger] start ok', res.status);
+      }
+    }
   } catch (_) {
     // swallow – analytics should never break the main flow
+    if (DEBUG) {
+      console.log('[chat-logger] start threw error');
+    }
   }
 }
 
@@ -58,7 +71,7 @@ export async function logChatEnd(row: ChatLogEnd) {
     const base = supabaseUrl('/rest/v1/chat_logs');
     if (!base) return;
     const url = `${base}?log_id=eq.${encodeURIComponent(row.logId)}`;
-    await fetch(url, {
+    const res = await fetch(url, {
       method: 'PATCH',
       headers: supabaseHeaders(),
       body: JSON.stringify({
@@ -67,8 +80,19 @@ export async function logChatEnd(row: ChatLogEnd) {
         ts_end: row.tsEndIso,
       })
     });
+    if (DEBUG) {
+      if (!res.ok) {
+        const txt = await res.text().catch(()=>'');
+        console.log('[chat-logger] end failed', res.status, txt.slice(0, 500));
+      } else {
+        console.log('[chat-logger] end ok', res.status);
+      }
+    }
   } catch (_) {
     // ignore
+    if (DEBUG) {
+      console.log('[chat-logger] end threw error');
+    }
   }
 }
 
