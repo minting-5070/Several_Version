@@ -128,20 +128,15 @@ export default function Home() {
     setProlificId(trimmed);
   };
 
-  // 메시지 상태 관리 + 페이즈 감지
+  // 메시지 상태 관리 (검색 상태는 응답이 끝날 때까지 유지)
   useEffect(() => {
     const lastMessage = messages[messages.length - 1];
 
     if (isLoading) {
       setIsThinking(true);
-      // 마커가 있을 때만 상태 표시
-      const temp = lastMessage?.content || '';
-      const hasSearching = lastMessage?.role === 'assistant' && temp.includes('<!--SEARCHING-->');
-      const hasGenerating = lastMessage?.role === 'assistant' && temp.includes('<!--GENERATING-->');
-      if (hasSearching) setPhase('searching');
-      else if (hasGenerating) setPhase('generating');
-      else if (phase === 'idle') setPhase('searching'); // 사이클 시작 기본값
-      setMarkerDriven(hasSearching || hasGenerating);
+      // 검색 표시 고정
+      if (phase !== 'searching') setPhase('searching');
+      setMarkerDriven(false);
 
       // 스트리밍 중인 마지막 assistant 메시지는 숨김, 없으면 전체 표시
       if (lastMessage?.role === 'assistant') {
@@ -159,14 +154,7 @@ export default function Home() {
     }
   }, [messages, isLoading]);
 
-  // 마커가 없을 때만 검색↔생성 상태를 번갈아 표시
-  useEffect(() => {
-    if (!isThinking || markerDriven) return;
-    const id = setInterval(() => {
-      setPhase((p) => (p === 'searching' ? 'generating' : 'searching'));
-    }, 3000);
-    return () => clearInterval(id);
-  }, [isThinking, markerDriven]);
+  // 검색 상태 고정: 토글 제거
 
   // 자동 전환 제거: 마커가 있을 때만 상태 표시
 
@@ -394,9 +382,7 @@ export default function Home() {
                             <div className="w-3 h-3 md:w-4 md:h-4 bg-primary rounded-full ra-dot" style={{ animationDelay: '280ms' }}></div>
                           </div>
                           <div className="ml-3">
-                            <div className="text-base md:text-lg font-semibold">
-                              {phase === 'searching' ? 'Searching the literature…' : 'Generating the answer…'}
-                            </div>
+                            <div className="text-base md:text-lg font-semibold">Searching the literature…</div>
                             <div className="text-sm md:text-base text-muted-foreground">
                               This may take a few minutes — please wait.
                             </div>
