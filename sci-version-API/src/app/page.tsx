@@ -3,6 +3,7 @@
 import { useChat } from 'ai/react';
 import ChatInput from './components/ChatInput';
 import ChatMessages from './components/ChatMessages';
+import PapersPanel from './components/PapersPanel';
 import { useRef, useEffect, useState } from 'react';
 
 
@@ -29,7 +30,7 @@ export default function Home() {
       prolificId: ((): string => {
         try { return localStorage.getItem('prolific_id') || ''; } catch { return ''; }
       })(),
-      appVersion: 'chat-version-api'
+      appVersion: 'sci-version-api'
     }
   });
   
@@ -37,14 +38,13 @@ export default function Home() {
   const [isThinking, setIsThinking] = useState(false);
   const [phase, setPhase] = useState<'idle' | 'searching' | 'generating'>('idle');
   const [markerDriven, setMarkerDriven] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [prolificId, setProlificId] = useState('');
+  const [prolificInput, setProlificInput] = useState('');
   const [brandLogoUrl, setBrandLogoUrl] = useState<string>('/branding/genyva-logo.svg');
   const [providerLogoUrl, setProviderLogoUrl] = useState<string>('/branding/openai-logo.svg');
   const [brandLogoReady, setBrandLogoReady] = useState<boolean>(false);
   const [providerLogoReady, setProviderLogoReady] = useState<boolean>(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [showNotice, setShowNotice] = useState(false);
-  const [prolificId, setProlificId] = useState('');
-  const [prolificInput, setProlificInput] = useState('');
   
 
 
@@ -57,24 +57,25 @@ export default function Home() {
     scrollToBottom();
   }, [displayMessages]);
 
-  // 로고 프리로드 (브랜드/프로바이더 각각)
+  // Preload brand (Genyva) and provider (OpenAI) logos with PNG-first + CDN fallback
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    // Brand logo (local)
     const brand = new Image();
     brand.onload = () => { setBrandLogoUrl('/branding/genyva-logo.svg'); setBrandLogoReady(true); };
     brand.onerror = () => setBrandLogoReady(false);
     brand.src = '/branding/genyva-logo.svg';
- 
-    // Provider logo: prefer user's PNG, then local SVG, then CDN
+
+    // Provider logo (PNG first -> SVG -> CDN)
     const candidates = [
       '/branding/openai-logo-badge.png',
       '/branding/openai-logo.png',
       '/branding/gpt.png',
       '/branding/openai-logo.svg',
-      'https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/openai.svg'
+      'https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/openai.svg',
     ];
     const tryNext = (idx: number) => {
-      if (idx >= candidates.length) { setProviderLogoReady(false); return; }
+      if (idx >= candidates.length) return;
       const img = new Image();
       img.onload = () => { setProviderLogoUrl(candidates[idx]); setProviderLogoReady(true); };
       img.onerror = () => tryNext(idx + 1);
@@ -82,51 +83,6 @@ export default function Home() {
     };
     tryNext(0);
   }, []);
-
-  // First-visit banner (show once or force via ?showBanner=1)
-  useEffect(() => {
-    try {
-      const qs = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
-      const forceShow = qs?.get('showBanner') === '1';
-      const storedId = typeof window !== 'undefined' ? localStorage.getItem('prolific_id') : '';
-      if (storedId) {
-        setProlificId(storedId);
-        setProlificInput(storedId);
-      }
-      // Mirror sci-version behavior: show when no Prolific ID, or when forced
-      if (forceShow || !storedId) setShowNotice(true);
-    } catch {}
-  }, []);
-  const dismissNotice = () => {
-    try { localStorage.setItem('cvt_marketing_seen_chat_api_v2', '1'); } catch {}
-    setShowNotice(false);
-  };
-  const saveProlificAndDismiss = () => {
-    const id = prolificInput.trim();
-    if (!id) return;
-    try {
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('prolific_id', id);
-        (window as any).dataLayer = (window as any).dataLayer || [];
-        (window as any).dataLayer.push({ event: 'prolific_id_set', prolific_id: id });
-      }
-      localStorage.setItem('cvt_marketing_seen_chat_api_v2', '1');
-    } catch {}
-    setProlificId(id);
-    setShowNotice(false);
-  };
-  const changeProlificId = () => {
-    if (typeof window === 'undefined') return;
-    const next = window.prompt('Enter your Prolific ID', prolificId || '') || '';
-    const trimmed = next.trim();
-    if (!trimmed) return;
-    try {
-      localStorage.setItem('prolific_id', trimmed);
-      (window as any).dataLayer = (window as any).dataLayer || [];
-      (window as any).dataLayer.push({ event: 'prolific_id_set', prolific_id: trimmed });
-    } catch {}
-    setProlificId(trimmed);
-  };
 
   // 메시지 상태 관리 + 페이즈 감지
   useEffect(() => {
@@ -176,6 +132,53 @@ export default function Home() {
     setIsThinking(false);
   };
   
+  // Marketing banner (first-visit modal)
+  const [showNotice, setShowNotice] = useState(false);
+  useEffect(() => {
+    try {
+      const STORAGE_KEY = 'cvt_marketing_seen_ra_api_v2';
+      const qs = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+      const forceShow = qs?.get('showBanner') === '1';
+      const seen = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : '1';
+      const storedId = typeof window !== 'undefined' ? localStorage.getItem('prolific_id') : '';
+      if (storedId) {
+        setProlificId(storedId);
+        setProlificInput(storedId);
+      }
+      if (forceShow || !seen || !storedId) setShowNotice(true);
+    } catch {}
+  }, []);
+  const dismissNotice = () => {
+    try { localStorage.setItem('cvt_marketing_seen_ra_api_v2', '1'); } catch {}
+    setShowNotice(false);
+  };
+  const saveProlificAndDismiss = () => {
+    const id = prolificInput.trim();
+    if (!id) return;
+    try {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('prolific_id', id);
+        (window as any).dataLayer = (window as any).dataLayer || [];
+        (window as any).dataLayer.push({ event: 'prolific_id_set', prolific_id: id });
+      }
+      localStorage.setItem('cvt_marketing_seen_ra_api_v2', '1');
+    } catch {}
+    setProlificId(id);
+    setShowNotice(false);
+  };
+  const changeProlificId = () => {
+    if (typeof window === 'undefined') return;
+    const next = window.prompt('Enter your Prolific ID', prolificId || '') || '';
+    const trimmed = next.trim();
+    if (!trimmed) return;
+    try {
+      localStorage.setItem('prolific_id', trimmed);
+      (window as any).dataLayer = (window as any).dataLayer || [];
+      (window as any).dataLayer.push({ event: 'prolific_id_set', prolific_id: trimmed });
+    } catch {}
+    setProlificId(trimmed);
+  };
+  
   // Helpers for analytics
   const getSessionId = () => {
     try {
@@ -211,12 +214,12 @@ export default function Home() {
         question_text: q.length > 500 ? q.slice(0, 500) : q,
         question_length: q.length,
         timestamp: new Date().toISOString(),
-        app_version: 'chat-version-api'
+        app_version: 'sci-version-api'
       });
     } catch {}
     handleSubmit(e);
   };
-
+  
   // Emit event when a new assistant answer arrives
   const lastAnswerIdRef = useRef<string>('');
   useEffect(() => {
@@ -238,7 +241,7 @@ export default function Home() {
         answer_excerpt: answer.length > 500 ? answer.slice(0, 500) : answer,
         answer_length: answer.length,
         timestamp: new Date().toISOString(),
-        app_version: 'chat-version-api'
+        app_version: 'sci-version-api'
       });
     } catch {}
   }, [messages, isLoading]);
@@ -259,11 +262,11 @@ export default function Home() {
                 {brandLogoReady ? (
                   <img src={brandLogoUrl} alt="Genyva" className="w-7 h-7" style={{ filter: 'brightness(1.08) saturate(1.2) contrast(1.05) drop-shadow(0 1px 1px rgba(0,0,0,.25))' }} />
                 ) : (
-                  <span className="text-lg font-bold">GA</span>
+                  <span className="text-lg font-bold">RA</span>
                 )}
               </div>
               <div className="flex items-center flex-wrap gap-2 md:gap-3">
-                <span className="text-lg md:text-2xl font-bold tracking-tight">General Assistant</span>
+                <span className="text-lg md:text-2xl font-bold tracking-tight">Research Assistant</span>
                 <span className="text-foreground/40">—</span>
                 <span className="text-base md:text-2xl font-semibold">Powered by</span>
                 <span className="text-base md:text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-primary to-blue-600 tracking-wide">OpenAI GPT</span>
@@ -318,20 +321,21 @@ export default function Home() {
                         {providerLogoReady && (
                           <img src={providerLogoUrl} alt="OpenAI" className="inline-block h-10 w-10 ml-2 align-[-8px] opacity-80" />
                         )}
-                        <span className="block text-2xl md:text-3xl font-semibold text-foreground/90">The general‑purpose assistant</span>
+                        <span className="block text-2xl md:text-3xl font-semibold text-foreground/90">The research‑specialized generative assistant</span>
                       </h2>
                     </div>
-                    <p className="mt-5 text-lg md:text-xl text-foreground">Genyva AI provides accurate, crisp answers for work, study, and everyday tasks utilizing GPT API</p>
+                    {/* removed foreground GPT badge to keep logo only in background */}
+                    <p className="mt-5 text-lg md:text-xl text-foreground">Genyva AI provides accurate literature discovery, summarization, and analysis with consistent standards — built for research by utilizing GPT API.</p>
+                    <div className="mt-5">
+                      <label className="block text-sm font-medium mb-2 text-foreground/90">Prolific ID</label>
+                      <input
+                        value={prolificInput}
+                        onChange={(e) => setProlificInput(e.target.value)}
+                        placeholder="Enter your Prolific ID"
+                        className="w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                      />
+                    </div>
                     <div className="mt-7 flex items-center justify-end gap-3">
-                      <div className="flex-1">
-                        <label className="block text-sm font-medium mb-2 text-foreground/90">Prolific ID</label>
-                        <input
-                          value={prolificInput}
-                          onChange={(e) => setProlificInput(e.target.value)}
-                          placeholder="Enter your Prolific ID"
-                          className="w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-                        />
-                      </div>
                       <button onClick={saveProlificAndDismiss} disabled={!prolificInput.trim()} className={`px-5 py-2.5 text-sm md:text-base rounded-lg ${prolificInput.trim() ? 'bg-primary text-primary-foreground hover:bg-primary/90' : 'bg-muted text-muted-foreground cursor-not-allowed'}`}>Start now</button>
                     </div>
                   </div>
@@ -350,22 +354,18 @@ export default function Home() {
                 {brandLogoReady ? (
                   <img src={brandLogoUrl} alt="Genyva" className="w-12 h-12" style={{ filter: 'brightness(1.08) saturate(1.2) contrast(1.05) drop-shadow(0 1.5px 1.5px rgba(0,0,0,.28))' }} />
                 ) : (
-                  <span className="text-2xl font-bold text-white">GA</span>
+                  <span className="text-2xl font-bold text-white">RA</span>
                 )}
               </div>
               <h1 className="text-4xl font-bold mb-4 text-foreground tracking-tight">
                 Genyva AI
               </h1>
               <div className="flex items-center justify-center gap-2 mb-4">
-                <span className="px-2 py-1 bg-primary/10 text-primary text-sm font-semibold rounded-lg">
-                  GPT API
-                </span>
+                <span className="px-2 py-1 bg-primary/10 text-primary text-sm font-semibold rounded-lg">GPT API</span>
               </div>
               <p className="text-lg text-muted-foreground mb-12">
-                Ask me anything! I'm here to help with questions, tasks, explanations, and whatever you need assistance with.
+                Professional assistant for academic literature discovery—finds top papers and delivers citation‑first summaries.
               </p>
-              
-
               
               {/* 입력창 */}
               <div className="w-full">
@@ -379,45 +379,55 @@ export default function Home() {
             </div>
               </div>
             ) : (
-          <div className="flex-1 container mx-auto px-4 py-6 max-w-4xl flex flex-col">
-            <div className="flex-1 overflow-y-auto mb-4">
-                <ChatMessages messages={displayMessages} />
-                {isThinking && (
-                  <div className="flex justify-start mt-6 md:mt-10 mb-4">
-                    <div className="flex max-w-[80%] flex-row items-end gap-2">
-                      <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0 bg-muted text-muted-foreground">
-                        AI
-                      </div>
-                      <div className="px-5 py-4 rounded-2xl bg-muted text-foreground rounded-bl-md shadow-sm">
-                        <div className="flex items-center">
-                          <div className="flex space-x-2">
-                            <div className="w-3 h-3 md:w-4 md:h-4 bg-primary rounded-full ra-dot" style={{ animationDelay: '0ms' }}></div>
-                            <div className="w-3 h-3 md:w-4 md:h-4 bg-primary rounded-full ra-dot" style={{ animationDelay: '140ms' }}></div>
-                            <div className="w-3 h-3 md:w-4 md:h-4 bg-primary rounded-full ra-dot" style={{ animationDelay: '280ms' }}></div>
-                          </div>
-                          <div className="ml-3">
-                            <div className="text-base md:text-lg font-semibold">
-                              {phase === 'searching' ? 'Searching the literature…' : 'Generating the answer…'}
+          <div className="flex-1 w-full px-2 md:px-6 py-6 flex flex-col">
+            <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-6 lg:gap-8 xl:gap-10">
+              {/* Left: Chat area (narrower) */}
+              <div className="md:col-span-4 xl:col-span-3 flex flex-col">
+                <div className="flex-1 overflow-y-auto mb-4">
+                  <ChatMessages messages={displayMessages} />
+                  {isThinking && (
+                    <div className="flex justify-start mt-6 md:mt-10 mb-4">
+                      <div className="flex max-w-[80%] flex-row items-end gap-2">
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0 bg-muted text-muted-foreground">
+                          AI
+                        </div>
+                        <div className="px-5 py-4 rounded-2xl bg-muted text-foreground rounded-bl-md shadow-sm">
+                          <div className="flex items-center">
+                            <div className="flex space-x-2">
+                              <div className="w-3 h-3 md:w-4 md:h-4 bg-primary rounded-full ra-dot" style={{ animationDelay: '0ms' }}></div>
+                              <div className="w-3 h-3 md:w-4 md:h-4 bg-primary rounded-full ra-dot" style={{ animationDelay: '140ms' }}></div>
+                              <div className="w-3 h-3 md:w-4 md:h-4 bg-primary rounded-full ra-dot" style={{ animationDelay: '280ms' }}></div>
                             </div>
-                            <div className="text-sm md:text-base text-muted-foreground">
-                              This may take a few minutes — please wait.
+                            <div className="ml-3">
+                              <div className="text-base md:text-lg font-semibold">
+                                {phase === 'searching' ? 'Searching the literature…' : 'Generating the answer…'}
+                              </div>
+                              <div className="text-sm md:text-base text-muted-foreground">
+                                This may take a few minutes — please wait.
+                              </div>
                             </div>
                           </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                )}
-            <div ref={messagesEndRef} />
-          </div>
-          <div className="border-t border-border pt-4">
-            <ChatInput
-              input={input}
-              handleInputChange={handleInputChange}
-              handleSubmit={handleSubmitGuarded}
-              isLoading={isLoading}
-            />
-          </div>
+                  )}
+                </div>
+                <div ref={messagesEndRef} />
+                <div className="border-t border-border pt-4">
+                  <ChatInput
+                    input={input}
+                    handleInputChange={handleInputChange}
+                    handleSubmit={handleSubmitGuarded}
+                    isLoading={isLoading}
+                  />
+                </div>
+              </div>
+
+              {/* Right: Papers panel (much wider) */}
+              <div className="md:col-span-8 xl:col-span-9">
+                <PapersPanel messages={displayMessages} />
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -437,3 +447,5 @@ export default function Home() {
     </div>
   );
 }
+
+

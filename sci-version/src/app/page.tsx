@@ -15,7 +15,24 @@ export default function Home() {
     handleSubmit,
     setMessages,
     isLoading,
-  } = useChat({ streamProtocol: 'text' });
+  } = useChat({
+    streamProtocol: 'text',
+    body: typeof window === 'undefined' ? {} : {
+      sessionId: ((): string => {
+        try {
+          const existing = localStorage.getItem('ra_session_id');
+          if (existing) return existing;
+          const created = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+          localStorage.setItem('ra_session_id', created);
+          return created;
+        } catch { return Math.random().toString(36).slice(2); }
+      })(),
+      prolificId: ((): string => {
+        try { return localStorage.getItem('prolific_id') || ''; } catch { return ''; }
+      })(),
+      appVersion: 'sci-version'
+    }
+  });
   
   const [displayMessages, setDisplayMessages] = useState(messages);
   const [isThinking, setIsThinking] = useState(false);

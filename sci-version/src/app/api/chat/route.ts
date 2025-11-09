@@ -1,11 +1,16 @@
 // Edge runtime provides native fetch
 import { SYSTEM_MESSAGE, GENERAL_MESSAGE, SYSTEM_MESSAGE_FLEX, SMALL_TALK_MESSAGE } from './system-message';
+import { logChatStart, logChatEnd } from '@/app/api/_lib/server-logger';
 import { ALL_PAPERS, searchPapersByQuery, rankPapersByQuery, type PaperRecord } from '@/data/papers';
 
 export const runtime = 'edge';
 
 export async function POST(req: Request) {
-  const { messages } = await req.json();
+  const body = await req.json();
+  const { messages } = body as { messages: any[] };
+  const sessionId = String((body as any)?.sessionId || '') || '';
+  const prolificId = String((body as any)?.prolificId || '') || '';
+  const appVersion = String((body as any)?.appVersion || 'sci-version');
 
   // 환경변수 디버깅
   const apiKey = process.env.OPENAI_API_KEY;
@@ -111,6 +116,21 @@ export async function POST(req: Request) {
   } as const;
 
   // 1차: 스트리밍 시도
+  // prepare logging (start)
+  const logId = (globalThis.crypto?.randomUUID?.() || Math.random().toString(36).slice(2)) as string;
+  const tsStartIso = new Date().toISOString();
+  try {
+    await logChatStart({
+      logId,
+      sessionId,
+      prolificId,
+      appVersion,
+      questionText: query,
+      questionLength: query.length,
+      tsStartIso
+    });
+  } catch {}
+
   const response = await fetch('https://api.openai.com/v1/responses', {
     method: 'POST',
     headers: { ...headers, 'Accept': 'text/event-stream' },
@@ -186,6 +206,15 @@ export async function POST(req: Request) {
 
       const outputText = extractText(data);
 
+      try {
+        await logChatEnd({
+          logId,
+          answerText: outputText,
+          answerLength: outputText.length,
+          tsEndIso: new Date().toISOString()
+        });
+      } catch {}
+
       return new Response(outputText, {
         status: 200,
         headers: { 'Content-Type': 'text/plain; charset=utf-8' }
@@ -204,6 +233,7 @@ export async function POST(req: Request) {
   const decoder = new TextDecoder();
   let remainder = '';
   let generatingMarkerSent = false;
+  let answerBuffer = '';
 
   const transformStream = new TransformStream({
     transform(chunk, controller) {
@@ -224,17 +254,21 @@ export async function POST(req: Request) {
             // responses API 이벤트 기반 처리
             if (event.type === 'response.output_text.delta' && event.delta) {
               controller.enqueue(encoder.encode(event.delta));
+              answerBuffer += String(event.delta);
             }
             // 대안적인 구조들도 확인
             else if (event.delta?.content) {
               controller.enqueue(encoder.encode(event.delta.content));
+              answerBuffer += String(event.delta.content);
             }
             else if (event.content) {
               controller.enqueue(encoder.encode(event.content));
+              answerBuffer += String(event.content);
             }
             // 기존 chat completions 구조도 유지 (호환성)
             else if (event.choices?.[0]?.delta?.content) {
               controller.enqueue(encoder.encode(event.choices[0].delta.content));
+              answerBuffer += String(event.choices[0].delta.content);
             }
 
           } catch (e) {
@@ -257,23 +291,38 @@ export async function POST(req: Request) {
           // responses API 이벤트 기반 처리
           if (event.type === 'response.output_text.delta' && event.delta) {
             controller.enqueue(encoder.encode(event.delta));
+            answerBuffer += String(event.delta);
           }
           // 대안적인 구조들도 확인
           else if (event.delta?.content) {
             controller.enqueue(encoder.encode(event.delta.content));
+            answerBuffer += String(event.delta.content);
           }
           else if (event.content) {
             controller.enqueue(encoder.encode(event.content));
+            answerBuffer += String(event.content);
           }
           // 기존 chat completions 구조도 유지
           else if (event.choices?.[0]?.delta?.content) {
             controller.enqueue(encoder.encode(event.choices[0].delta.content));
+            answerBuffer += String(event.choices[0].delta.content);
           }
           
         } catch (e) {
           // ignore parse errors
         }
       }
+
+      // finalize logging
+      try {
+        const tsEndIso = new Date().toISOString();
+        void logChatEnd({
+          logId,
+          answerText: answerBuffer,
+          answerLength: answerBuffer.length,
+          tsEndIso
+        });
+      } catch {}
 
       // No server-side card appending in classic mode
     },

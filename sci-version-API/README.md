@@ -1,58 +1,30 @@
-# 🎯 Top Journal Paper Scanner - Academic AI Assistant
+# Research Assistant - Academic AI Assistant
 
-A sophisticated AI assistant specialized in academic research, leveraging top-tier journals and high-impact papers to provide credible, peer-reviewed information. Now with integrated SerpAPI for real-time academic paper search!
+A sophisticated AI assistant specialized in academic research, leveraging top-tier journals and high-impact papers to provide credible, peer-reviewed information.
 
 ## 🔬 Features
 
-- **🎯 Top Journal Scanner**: Automatically searches and filters top-tier academic papers
-- **📚 SerpAPI Integration**: Real-time Google Scholar search with academic paper analysis
-- **🤖 AI-Powered Analysis**: GPT-4o-mini analyzes papers for relevance and usefulness
-- **⭐ Journal Tier Classification**: Automatic classification of papers by journal quality
-- **🔍 Smart Search**: Detects research queries and automatically searches academic databases
-- **📖 Academic Excellence**: Prioritizes top-tier journals (Nature, Science, Cell, UTD 24, etc.)
-- **🎓 Research Assistant**: Specialized for academic research and literature review
+- **Academic Excellence**: Prioritizes top-tier journals (Nature, Science, Cell, UTD 24, etc.)
+- **High-Impact Sources**: Focuses on papers with high impact factors (IF > 3.0)
+- **Peer-Reviewed Only**: Exclusively cites peer-reviewed publications
+- **Credibility First**: Advanced filtering for reliable academic sources
+- **Journal Rankings**: Built-in journal ranking and impact factor information
+- **GPT-4o Powered**: Utilizes the latest OpenAI GPT-4o model
 
 ## 🚀 Quick Start
 
-### 1. Backend Server Setup
+### 1. Environment Setup
 
-First, start the backend server:
-
-```bash
-# Navigate to backend directory
-cd backend
-
-# Install dependencies
-npm install
-
-# Copy environment file
-cp env.example .env
-
-# Edit .env file with your API keys
-# OPENAI_API_KEY=your_openai_api_key_here
-# SERPAPI_KEY=your_serpapi_key_here
-
-# Start backend server
-npm start
-```
-
-### 2. Frontend Setup
-
-Create a `.env.local` file in the chat-version root:
+Create a `.env.local` file in the project root:
 
 ```bash
 # OpenAI API Configuration
 OPENAI_API_KEY=your_openai_api_key_here
-
-# Backend API Configuration (optional, defaults to localhost:5000)
-BACKEND_API_URL=http://localhost:5000
 ```
 
-**Get your API keys from**:
-- [OpenAI Platform](https://platform.openai.com/api-keys)
-- [SerpAPI](https://serpapi.com/) for Google Scholar search
+**Get your API key from**: [OpenAI Platform](https://platform.openai.com/api-keys)
 
-### 3. Installation & Development
+### 2. Installation & Development
 
 ```bash
 # Install dependencies
@@ -63,20 +35,6 @@ npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) to access the application.
-
-## 🔧 System Architecture
-
-```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Frontend      │    │   Backend       │    │   External APIs │
-│   (Next.js)     │◄──►│   (Express.js)  │◄──►│   SerpAPI       │
-│   Port: 3000    │    │   Port: 5000     │    │   OpenAI API    │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-```
-
-- **Frontend**: Next.js chat interface with AI integration
-- **Backend**: Express.js server with SerpAPI and OpenAI integration
-- **API Flow**: Frontend → Backend → SerpAPI (Google Scholar) → OpenAI (Analysis)
 
 ## 📚 Academic Sources
 
