@@ -95,9 +95,7 @@ export default function Home() {
       setIsThinking(false);
       setPhase('idle');
       setMarkerDriven(false);
-      setTimeout(() => {
-        setDisplayMessages(messages);
-      }, 200);
+      setDisplayMessages(messages);
     }
   }, [messages, isLoading]);
 
@@ -418,7 +416,7 @@ export default function Home() {
 
               {/* Right: Papers panel (much wider) */}
               <div className="md:col-span-8 xl:col-span-9">
-                <PapersPanel messages={displayMessages} />
+                <PapersPanel messages={messages} isLoading={isLoading} />
               </div>
             </div>
           </div>

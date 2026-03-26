@@ -1,9 +1,10 @@
 // Edge runtime provides native fetch
-import { SYSTEM_MESSAGE, GENERAL_MESSAGE, SYSTEM_MESSAGE_FLEX, SMALL_TALK_MESSAGE } from './system-message';
+import { SYSTEM_MESSAGE, SMALL_TALK_MESSAGE } from './system-message';
 import { logChatStart, logChatEnd } from '@/app/api/_lib/server-logger';
 import { ALL_PAPERS, searchPapersByQuery, rankPapersByQuery, type PaperRecord } from '@/data/papers';
 
 export const runtime = 'edge';
+export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
   const body = await req.json();
@@ -12,11 +13,8 @@ export async function POST(req: Request) {
   const prolificId = String((body as any)?.prolificId || '') || '';
   const appVersion = String((body as any)?.appVersion || 'sci-version');
 
-  // 환경변수 디버깅
   const apiKey = process.env.OPENAI_API_KEY;
-  console.log('OPENAI_API_KEY exists:', !!apiKey);
-  console.log('OPENAI_API_KEY length:', apiKey?.length || 0);
-  
+
   if (!apiKey) {
     return new Response('OpenAI API key is not configured', {
       status: 200,
@@ -24,7 +22,6 @@ export async function POST(req: Request) {
     });
   }
 
-  // 메시지 병합 로직
   const mergedMessages = [] as typeof messages;
   for (const msg of messages) {
     if (mergedMessages.length > 0 && mergedMessages[mergedMessages.length - 1].role === msg.role) {
@@ -34,10 +31,8 @@ export async function POST(req: Request) {
     }
   }
 
-  // Build LOCAL DATABASE context from the latest user query
   const latestUser = [...mergedMessages].reverse().find((m: any) => m.role === 'user');
   const query = String(latestUser?.content || '').slice(0, 2000);
-  // Small-talk / non-research detection (short greetings, who-are-you, thanks, etc.)
   const q = query.toLowerCase().trim();
   const isSmallTalk = (
     q.length <= 80 && (
@@ -48,7 +43,6 @@ export async function POST(req: Request) {
     )
   );
 
-  // Prefer fuzzy ranking; if no query, don't preselect (will fill to 10 later)
   let candidates = (query ? rankPapersByQuery(query) : []).slice(0, 20);
   if (query && candidates.length === 0) {
     candidates = searchPapersByQuery(query).slice(0, 20);
@@ -58,10 +52,11 @@ export async function POST(req: Request) {
     role: 'system' as const,
     content: isSmallTalk ? SMALL_TALK_MESSAGE : SYSTEM_MESSAGE
   };
+
   const ensureTen = (arr: PaperRecord[]) => {
     if (arr.length >= 10) return arr.slice(0, 10);
     const need = 10 - arr.length;
-    const more = ALL_PAPERS.filter(p => !arr.includes(p)).slice(0, need);
+    const more = ALL_PAPERS.filter((p) => !arr.includes(p)).slice(0, need);
     return [...arr, ...more].slice(0, 10);
   };
   const selected = ensureTen(candidates);
@@ -96,7 +91,6 @@ export async function POST(req: Request) {
     ];
   })();
 
-  // 요청 헤더 구성 (조직/프로젝트 헤더는 선택)
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     'Authorization': `Bearer ${apiKey}`,
@@ -107,16 +101,12 @@ export async function POST(req: Request) {
   const projectId = process.env.OPENAI_PROJECT;
   if (projectId) headers['OpenAI-Project'] = projectId;
 
-  // 요청 바디 공통 부분
   const requestBodyBase = {
     model: 'gpt-5-mini',
-    // Responses API: specify text.format as an object
     text: { format: { type: 'text' } },
     input: formattedInput
   } as const;
 
-  // 1차: 스트리밍 시도
-  // prepare logging (start)
   const logId = (globalThis.crypto?.randomUUID?.() || Math.random().toString(36).slice(2)) as string;
   const tsStartIso = new Date().toISOString();
   try {
@@ -140,12 +130,40 @@ export async function POST(req: Request) {
     })
   });
 
+  const extractText = (d: any): string => {
+    try {
+      if (typeof d?.output_text === 'string') return d.output_text;
+      if (Array.isArray(d?.output_text)) return d.output_text.join('');
+
+      if (Array.isArray(d?.output)) {
+        let buf = '';
+        for (const item of d.output) {
+          if (item?.type === 'message' && Array.isArray(item.content)) {
+            for (const block of item.content) {
+              if (typeof block?.text === 'string') buf += block.text;
+              else if (typeof block?.content === 'string') buf += block.content;
+            }
+          } else if (item?.type === 'message' && typeof item?.content === 'string') {
+            buf += item.content;
+          }
+        }
+        if (buf) return buf;
+      }
+
+      if (typeof d?.content === 'string') return d.content;
+      if (d?.choices?.[0]?.message?.content) return d.choices[0].message.content;
+
+      return typeof d === 'string' ? d : JSON.stringify(d);
+    } catch {
+      return typeof d === 'string' ? d : JSON.stringify(d);
+    }
+  };
+
   if (!response.ok) {
     const errorText = await response.text();
-    // 스트리밍이 제한된 경우 자동으로 비스트리밍 모드로 재시도
     const shouldRetryWithoutStream =
       errorText.includes('must be verified to stream') ||
-      errorText.includes('param') && errorText.includes('stream') ||
+      (errorText.includes('param') && errorText.includes('stream')) ||
       errorText.includes('unsupported_value');
 
     if (shouldRetryWithoutStream) {
@@ -167,43 +185,7 @@ export async function POST(req: Request) {
         });
       }
 
-      // 비스트리밍 응답 파싱 후 텍스트로 반환
       const data = await nonStreamResp.json();
-
-      const extractText = (d: any): string => {
-        try {
-          // 1) Preferred Responses API field
-          if (typeof d?.output_text === 'string') return d.output_text;
-          if (Array.isArray(d?.output_text)) return d.output_text.join('');
-
-          // 2) Responses API structured output array
-          if (Array.isArray(d?.output)) {
-            let buf = '';
-            for (const item of d.output) {
-              if (item?.type === 'message' && Array.isArray(item.content)) {
-                for (const block of item.content) {
-                  // Common block shapes: { type: 'output_text', text }, { type: 'text', text }
-                  if (typeof block?.text === 'string') buf += block.text;
-                  else if (typeof block?.content === 'string') buf += block.content;
-                }
-              } else if (item?.type === 'message' && typeof item?.content === 'string') {
-                buf += item.content;
-              }
-            }
-            if (buf) return buf;
-          }
-
-          // 3) Chat Completions compatibility
-          if (typeof d?.content === 'string') return d.content;
-          if (d?.choices?.[0]?.message?.content) return d.choices[0].message.content;
-
-          // 4) Fallback
-          return typeof d === 'string' ? d : JSON.stringify(d);
-        } catch {
-          return typeof d === 'string' ? d : JSON.stringify(d);
-        }
-      };
-
       const outputText = extractText(data);
 
       try {
@@ -228,11 +210,9 @@ export async function POST(req: Request) {
     });
   }
 
-  // 스트리밍 응답 처리
   const encoder = new TextEncoder();
   const decoder = new TextDecoder();
   let remainder = '';
-  let generatingMarkerSent = false;
   let answerBuffer = '';
 
   const transformStream = new TransformStream({
@@ -251,12 +231,10 @@ export async function POST(req: Request) {
             const jsonStr = line.slice(5).trimStart();
             const event = JSON.parse(jsonStr);
 
-            // responses API 이벤트 기반 처리
             if (event.type === 'response.output_text.delta' && event.delta) {
               controller.enqueue(encoder.encode(event.delta));
               answerBuffer += String(event.delta);
             }
-            // 대안적인 구조들도 확인
             else if (event.delta?.content) {
               controller.enqueue(encoder.encode(event.delta.content));
               answerBuffer += String(event.delta.content);
@@ -265,35 +243,26 @@ export async function POST(req: Request) {
               controller.enqueue(encoder.encode(event.content));
               answerBuffer += String(event.content);
             }
-            // 기존 chat completions 구조도 유지 (호환성)
             else if (event.choices?.[0]?.delta?.content) {
               controller.enqueue(encoder.encode(event.choices[0].delta.content));
               answerBuffer += String(event.choices[0].delta.content);
             }
 
-          } catch (e) {
-            console.log('JSON parse error:', e instanceof Error ? e.message : 'Unknown error', 'Line:', line);
+          } catch {
+            // ignore parse errors
           }
         }
       }
     },
 
     flush(controller) {
-      // Right before finishing, indicate generation phase briefly
-      if (!generatingMarkerSent) {
-        controller.enqueue(encoder.encode(''));
-        generatingMarkerSent = true;
-      }
       if (remainder.startsWith('data:')) {
         try {
           const event = JSON.parse(remainder.slice(5).trimStart());
-          
-          // responses API 이벤트 기반 처리
           if (event.type === 'response.output_text.delta' && event.delta) {
             controller.enqueue(encoder.encode(event.delta));
             answerBuffer += String(event.delta);
           }
-          // 대안적인 구조들도 확인
           else if (event.delta?.content) {
             controller.enqueue(encoder.encode(event.delta.content));
             answerBuffer += String(event.delta.content);
@@ -302,29 +271,21 @@ export async function POST(req: Request) {
             controller.enqueue(encoder.encode(event.content));
             answerBuffer += String(event.content);
           }
-          // 기존 chat completions 구조도 유지
           else if (event.choices?.[0]?.delta?.content) {
             controller.enqueue(encoder.encode(event.choices[0].delta.content));
             answerBuffer += String(event.choices[0].delta.content);
           }
-          
-        } catch (e) {
-          // ignore parse errors
-        }
+        } catch {}
       }
 
-      // finalize logging
       try {
-        const tsEndIso = new Date().toISOString();
         void logChatEnd({
           logId,
           answerText: answerBuffer,
           answerLength: answerBuffer.length,
-          tsEndIso
+          tsEndIso: new Date().toISOString()
         });
       } catch {}
-
-      // No server-side card appending in classic mode
     },
   });
 

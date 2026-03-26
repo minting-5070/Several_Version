@@ -81,42 +81,6 @@ Voluntary knowledge contribution on online platforms holds significant value for
 
 https://pubsonline.informs.org/doi/10.1287/isre.2023.0332
 
-Hou, J., Wang, L., Wang, G., Wang, H. J., & Yang, S. (2025). The double-edged roles of generative ai in the creative process: Experiments on design work. Information Systems Research.
-
-Generative artificial intelligence (GenAI) mimics human creativity by producing novel and complex content solutions, which redefine human-AI collaboration across various creative domains. Despite this transformative potential, the existing GenAI literature largely examines creativity as an end product, overlooking the intricate dynamics of the human-GenAI cocreative process. Addressing this gap, our research conceptualizes creativity as a process encompassing two distinct stages: an ideation stage and an implementation stage. Drawing on theories of creativity and expertise fixation, we theorize that GenAI influences the two stages differently, depending on the expertise level of the human creators. Our Study 1 (a laboratory experiment) demonstrates that GenAI tremendously enhances work creativity in the ideation stage by mitigating cognitive fixation for all designers. However, during the implementation stage, the impacts diverge: low-expertise designers with GenAI continue to experience improvements in work creativity, whereas high-expertise designers with GenAI show no gains in their work creativity and suffer a significant reduction in their work efficiency. Further video analyses reveal that expertise fixation underpins these impacts. That is, as GenAI introduces work approaches that deviate from high-expertise designers’ established approaches in implementation, cocreation with GenAI leads to counterproductive outcomes. Building on these findings, Study 2 (a field experiment) further validates the impact of GenAI and the role of expertise fixation among professional designers, and rules out alternative explanations. This study also employs a cutting-edge GenAI model to ensure the robustness of our findings against technological advancements. Our findings provide a nuanced understanding of GenAI’s role in the cocreative process and elucidate its heterogeneous effects based on creators’ expertise levels. This research advances the literature on human-AI collaboration and offers actionable insights for optimizing the use of GenAI in creative work.
-
-https://pubsonline.informs.org/doi/10.1287/isre.2024.0937
-
-Yahav, I., Goldstein, A., Geva, T., Meir, S., & Shehory, O. (2025). Quality Control for Crowd Workers and for Language Models: A Framework for Free-Text Response Evaluation with No Ground Truth. Information Systems Research.
-
-In recent years, the field of natural language processing has made remarkable progress with the emergence of large language models (LLMs). In particular, the ability of LLMs to provide fact-based, free-text responses to user queries has the potential to revolutionize domains such as online search and the use of informative chatbots. However, extensive validation is required so that the response accuracy of question-answering LLMs can be confidently trusted. This paper introduces a framework to address this challenge: automated quality evaluation based on textual responses (AQER). The AQER framework focuses on two primary tasks: evaluating the quality of individual workers based on their free-text responses given that no ground-truth data are available and assessing the quality of LLM responses given a set of worker-generated responses. AQER is advantageously intuitive, easy to implement, and flexible to accommodate different components. To evaluate AQER’s effectiveness, we conducted empirical evaluations using semi-synthetic and real-world question-and-answer data sets as well as stress testing through numerical simulations. We also provide analytical motivation and show method convergence and boundary conditions using the probably approximately correct learning framework. The results demonstrate AQER’s robustness in evaluating LLMs and workers, and its superiority over baseline approaches. These findings establish AQER as a benchmark for future research in this field.
-
-https://pubsonline.informs.org/doi/10.1287/isre.2023.0426
-
-Fügener, A., Grahl, J., Gupta, A., & Ketter, W. (2022). Cognitive challenges in human–artificial intelligence collaboration: Investigating the path toward productive delegation. Information Systems Research, 33(2), 678-696.
-
-We study how humans make decisions when they collaborate with an artificial intelligence (AI) in a setting where humans and the AI perform classification tasks. Our experimental results suggest that humans and AI who work together can outperform the AI that outperforms humans when it works on its own. However, the combined performance improves only when the AI delegates work to humans but not when humans delegate work to the AI. The AI’s delegation performance improved even when it delegated to low-performing subjects; by contrast, humans did not delegate well and did not benefit from delegation to the AI. This bad delegation performance cannot be explained with some kind of algorithm aversion. On the contrary, subjects acted rationally in an internally consistent manner by trying to follow a proven delegation strategy and appeared to appreciate the AI support. However, human performance suffered as a result of a lack of metaknowledge—that is, humans were not able to assess their own capabilities correctly, which in turn led to poor delegation decisions. Lacking metaknowledge, in contrast to reluctance to use AI, is an unconscious trait. It fundamentally limits how well human decision makers can collaborate with AI and other algorithms. The results have implications for the future of work, the design of human–AI collaborative environments, and education in the digital age.
-
-https://pubsonline.informs.org/doi/10.1287/isre.2021.1079
-
-Chen, Y., Rui, H., & Whinston, A. B. (2025). Conversation Analytics: Can Machines Read Between the Lines in Real-Time Strategic Conversations?. Information Systems Research, 36(1), 440-455.
-
-Strategic conversations involve one party with an informational advantage and another with an interest in the information. This paper proposes machine learning–based methods to quantify the evasiveness and incoherence of the more-informed party during real-time strategic conversations. To demonstrate the effectiveness of these methods in a real-world setting, we consider the question-and-answer sessions of earnings conference calls, during which managers face scrutinizing questions from analysts. Being reluctant to disclose adverse information, managers may resort to evasive answers and sometimes respond less coherently than they otherwise would. Using data from the earnings calls of S&P 500 companies from 2006 to 2018, we show that the proposed measures predict worse next-quarter earnings. The stock market also perceives incoherence as a negative signal. This paper contributes methodologically to business analytics by developing machine learning methods to extract behavioral cues from real-time strategic conversations. We believe the wide adoption of these tools can increase the efficiency of various markets and institutions where real-time strategic conversations routinely occur, which ultimately benefits business and society.
-
-https://pubsonline.informs.org/doi/10.1287/isre.2022.0415
-
-Lee, K., & Ram, S. (2024). Explainable deep learning for false information identification: An argumentation theory approach. Information Systems Research, 35(2), 890-907.
-
-In today’s world, where online information is proliferating in an unprecedented way, a significant challenge is whether to believe the information we encounter. Ironically, this flood of information provides us with an opportunity to combat false claims by understanding their nature. That is, with the help of machine learning, it is now possible to effectively capture the characteristics of false information by analyzing massive amounts of false claims published online. These methods, however, have neglected the nature of human argumentation, delegating the process of making inferences of the truth to the black box of neural networks. This has created several challenges (namely latent text representations containing entangled syntactic and semantic information, an irrelevant part of text being considered when abstracting text as a latent vector, and counterintuitive model explanation). To resolve these issues, based on Toulmin’s model of argumentation, we propose a computational framework that helps machine learning for false information identification (FII) understand the connection between a claim (whose veracity needs to be verified) and evidence (which contains information to support or refute the claim). Specifically, we first build a word network of a claim and evidence reflecting their syntaxes and convert it into a signed word network using their semantics. The structural balance of this word network is then calculated as a proxy metric to determine the consistency between a claim and evidence. The consistency level is fed into machine learning as input, providing information for verifying claim veracity and explaining the model’s decision making. The two experiments for testing model performance and explainability reveal that our framework shows stronger performance and better explainability, outperforming cutting-edge methods and presenting positive effects on human task performance, trust in algorithms, and confidence in decision making. Our results shed new light on the growing field of automated FII.
-
-https://pubsonline.informs.org/doi/10.1287/isre.2020.0097
-
-Shan, G., & Qiu, L. (2025). Examining the impact of generative ai on users’ voluntary knowledge contribution: Evidence from a natural experiment on stack overflow. Information Systems Research.
-
-Voluntary knowledge contribution on online platforms holds significant value for users, platforms, and firms. Rapid advancements in generative artificial intelligence (AI) techniques have facilitated the automatic generation of knowledge on question-and-answer (Q&A) platforms. However, the impact of generative AI on users’ voluntary knowledge contributions remains an empirical question. On the one hand, users may learn from generative AI, improving their answers by providing more organized and logical responses. On the other hand, generative AI can produce fabricated answers, and the accelerated pace of responding with AI assistance may impose additional cognitive burdens for comprehending the outputs, potentially reducing overall contributions. Our study examines the effects of generative AI, specifically ChatGPT, on users’ voluntary knowledge contributions on Stack Overflow, one of the largest Q&A platforms. Utilizing a natural experiment, we employ difference-in-differences (DID) estimation to investigate the effects of generative AI on both the quantity and quality of user contributions, measured by the number of answers generated per day, answer length, and readability. Our findings reveal that the use of generative AI correlates with an increased number of answers generated by users, and these answers tend to be shorter in length and easier to read. We further explore the moderating effects of cumulative usage and usage intensity on the impacts of generative AI to test the mechanisms of learning and cognitive load. Our results indicate that users are learning from generative AI, enabling them to answer more questions while producing shorter and more digestible responses. Conversely, the additional cognitive burden associated with intensive AI usage negatively affects its impact on answer quantity. The implications of this study are both theoretical and practical. Theoretically, we contribute to the Information Systems (IS) literature by examining the influence of generative AI on users’ voluntary knowledge contributions within the context of Q&A platforms. Practically, our findings provide platform owners and managers with insights into how generative AI affects users’ knowledge contribution behavior, guiding decision-making and strategic development for integrating generative AI into their platforms.
-
-https://pubsonline.informs.org/doi/10.1287/isre.2023.0332
-
 Demirci, O., Hannane, J., & Zhu, X. (2025). Who is AI replacing? The impact of generative AI on online freelancing platforms. Management Science.
 
 This paper studies the impact of generative artificial intelligence (AI) technologies on the demand for online freelancers using a large data set from a leading global freelancing platform. We identify the types of jobs that are more affected by generative AI and quantify the magnitude of the heterogeneous impact. Our findings indicate a 21% decrease in the number of job posts for automation-prone jobs related to writing and coding compared with jobs requiring manual-intensive skills within eight months after the introduction of ChatGPT. We show that the reduction in the number of job posts increases competition among freelancers, whereas the remaining automation-prone jobs are of greater complexity and offer higher pay. We also find that the introduction of image-generating AI technologies led to a 17% decrease in the number of job posts related to image creation. We use Google Trends to show that the more pronounced decline in the demand for freelancers within automation-prone jobs correlates with their higher public awareness of ChatGPT’s substitutability.
@@ -268,61 +232,81 @@ function canonicalKeyFromLink(link: string, fallbackTitle?: string, fallbackYear
 }
 
 function parsePastedEntries(raw: string): PaperRecord[] {
-	const input = (raw || '').trim();
-	if (!input) return [];
+  const input = (raw || '').trim();
+  if (!input) return [];
 
-	const results: PaperRecord[] = [];
-	// Match blocks: citation line(s), abstract chunk, then a line with @URL (or bare URL)
-	const re = /(.*?)\n+([\s\S]*?)\n+@?(https?:\/\/\S+)/g;
-	let m: RegExpExecArray | null;
-	while ((m = re.exec(input)) !== null) {
-		const citation = (m[1] || '').replace(/\s+/g, ' ').trim();
-		const abstract = (m[2] || '').trim();
-		const link = (m[3] || '').trim();
+  const results: PaperRecord[] = [];
+  const lines = input.replace(/\r\n/g, '\n').split('\n');
+  const acc: string[] = [];
 
-		// Parse citation heuristically: Authors (Year). Title. Journal ...
-		let authors = '';
-		let yearNum = new Date().getFullYear();
-		let title = '';
-		let journal = '';
+  const pushRecord = (linkRaw: string) => {
+    const link = String(linkRaw || '')
+      .trim()
+      .replace(/^@/, '');
+    const body = acc.join('\n').trim();
+    acc.length = 0;
+    if (!body || !/^https?:\/\//i.test(link)) return;
 
-		const yearMatch = citation.match(/\((\d{4})\)/);
-		if (yearMatch) {
-			yearNum = Number(yearMatch[1]);
-		}
-		const authorsPart = citation.split('(')[0] || '';
-		authors = authorsPart.trim().replace(/[\s.]+$/, '');
+    const paras = body
+      .split(/\n\s*\n/)
+      .map((p) => p.replace(/\s+/g, ' ').trim())
+      .filter(Boolean);
 
-		let rest = citation.replace(/^.*?\)\.\s*/, ''); // drop up to ") . "
-		const firstDot = rest.indexOf('.');
-		if (firstDot >= 0) {
-			title = rest.slice(0, firstDot).trim();
-			rest = rest.slice(firstDot + 1).trim();
-		} else {
-			title = rest.trim();
-			rest = '';
-		}
-		if (!title) title = citation; // fallback
+    if (paras.length === 0) return;
 
-		// Journal: take the first segment in the remainder before a period or before a volume-like token
-		const journalCandidate = rest.split('.')[0] || rest;
-		journal = (journalCandidate.split(',')[0] || journalCandidate).trim();
-		journal = journal.replace(/[\s.]+$/, '');
+    const citation = paras[0];
+    const abstract = paras.length > 1 ? paras.slice(1).join('\n\n').trim() : '';
 
-    // Stable ID with canonicalization
+    let authors = '';
+    let yearNum = new Date().getFullYear();
+    let title = '';
+    let journal = '';
+
+    const yearMatch = citation.match(/\((\d{4})\)/);
+    if (yearMatch) {
+      yearNum = Number(yearMatch[1]);
+    }
+    const authorsPart = citation.split('(')[0] || '';
+    authors = authorsPart.trim().replace(/[\s.]+$/, '');
+
+    let rest = citation.replace(/^.*?\)\.\s*/, '');
+    const firstDot = rest.indexOf('.');
+    if (firstDot >= 0) {
+      title = rest.slice(0, firstDot).trim();
+      rest = rest.slice(firstDot + 1).trim();
+    } else {
+      title = rest.trim();
+      rest = '';
+    }
+    if (!title) title = citation;
+
+    const journalCandidate = rest.split('.')[0] || rest;
+    journal = (journalCandidate.split(',')[0] || journalCandidate).trim();
+    journal = journal.replace(/[\s.]+$/, '');
+
     const id = canonicalKeyFromLink(link, title, yearNum);
 
-		results.push({
-			id,
-			title,
-			authors,
-			year: yearNum,
-			journal,
-			link,
-			abstract,
-		});
-	}
-	return results;
+    results.push({
+      id,
+      title,
+      authors,
+      year: yearNum,
+      journal,
+      link,
+      abstract,
+    });
+  };
+
+  for (const line of lines) {
+    const t = line.trim();
+    if (/^@?https?:\/\/\S+$/i.test(t)) {
+      pushRecord(t);
+    } else {
+      acc.push(line);
+    }
+  }
+
+  return results;
 }
 
 // Deduplicate by canonical key
@@ -405,5 +389,6 @@ export function rankPapersByQuery(query: string): PaperRecord[] {
     .sort((a, b) => b.s - a.s);
   return scored.map(x => x.p);
 }
+
 
 

@@ -232,61 +232,81 @@ function canonicalKeyFromLink(link: string, fallbackTitle?: string, fallbackYear
 }
 
 function parsePastedEntries(raw: string): PaperRecord[] {
-	const input = (raw || '').trim();
-	if (!input) return [];
+  const input = (raw || '').trim();
+  if (!input) return [];
 
-	const results: PaperRecord[] = [];
-	// Match blocks: citation line(s), abstract chunk, then a line with @URL (or bare URL)
-	const re = /(.*?)\n+([\s\S]*?)\n+@?(https?:\/\/\S+)/g;
-	let m: RegExpExecArray | null;
-	while ((m = re.exec(input)) !== null) {
-		const citation = (m[1] || '').replace(/\s+/g, ' ').trim();
-		const abstract = (m[2] || '').trim();
-		const link = (m[3] || '').trim();
+  const results: PaperRecord[] = [];
+  const lines = input.replace(/\r\n/g, '\n').split('\n');
+  const acc: string[] = [];
 
-		// Parse citation heuristically: Authors (Year). Title. Journal ...
-		let authors = '';
-		let yearNum = new Date().getFullYear();
-		let title = '';
-		let journal = '';
+  const pushRecord = (linkRaw: string) => {
+    const link = String(linkRaw || '')
+      .trim()
+      .replace(/^@/, '');
+    const body = acc.join('\n').trim();
+    acc.length = 0;
+    if (!body || !/^https?:\/\//i.test(link)) return;
 
-		const yearMatch = citation.match(/\((\d{4})\)/);
-		if (yearMatch) {
-			yearNum = Number(yearMatch[1]);
-		}
-		const authorsPart = citation.split('(')[0] || '';
-		authors = authorsPart.trim().replace(/[\s.]+$/, '');
+    const paras = body
+      .split(/\n\s*\n/)
+      .map((p) => p.replace(/\s+/g, ' ').trim())
+      .filter(Boolean);
 
-		let rest = citation.replace(/^.*?\)\.\s*/, ''); // drop up to ") . "
-		const firstDot = rest.indexOf('.');
-		if (firstDot >= 0) {
-			title = rest.slice(0, firstDot).trim();
-			rest = rest.slice(firstDot + 1).trim();
-		} else {
-			title = rest.trim();
-			rest = '';
-		}
-		if (!title) title = citation; // fallback
+    if (paras.length === 0) return;
 
-		// Journal: take the first segment in the remainder before a period or before a volume-like token
-		const journalCandidate = rest.split('.')[0] || rest;
-		journal = (journalCandidate.split(',')[0] || journalCandidate).trim();
-		journal = journal.replace(/[\s.]+$/, '');
+    const citation = paras[0];
+    const abstract = paras.length > 1 ? paras.slice(1).join('\n\n').trim() : '';
 
-    // Stable ID with canonicalization
+    let authors = '';
+    let yearNum = new Date().getFullYear();
+    let title = '';
+    let journal = '';
+
+    const yearMatch = citation.match(/\((\d{4})\)/);
+    if (yearMatch) {
+      yearNum = Number(yearMatch[1]);
+    }
+    const authorsPart = citation.split('(')[0] || '';
+    authors = authorsPart.trim().replace(/[\s.]+$/, '');
+
+    let rest = citation.replace(/^.*?\)\.\s*/, '');
+    const firstDot = rest.indexOf('.');
+    if (firstDot >= 0) {
+      title = rest.slice(0, firstDot).trim();
+      rest = rest.slice(firstDot + 1).trim();
+    } else {
+      title = rest.trim();
+      rest = '';
+    }
+    if (!title) title = citation;
+
+    const journalCandidate = rest.split('.')[0] || rest;
+    journal = (journalCandidate.split(',')[0] || journalCandidate).trim();
+    journal = journal.replace(/[\s.]+$/, '');
+
     const id = canonicalKeyFromLink(link, title, yearNum);
 
-		results.push({
-			id,
-			title,
-			authors,
-			year: yearNum,
-			journal,
-			link,
-			abstract,
-		});
-	}
-	return results;
+    results.push({
+      id,
+      title,
+      authors,
+      year: yearNum,
+      journal,
+      link,
+      abstract,
+    });
+  };
+
+  for (const line of lines) {
+    const t = line.trim();
+    if (/^@?https?:\/\/\S+$/i.test(t)) {
+      pushRecord(t);
+    } else {
+      acc.push(line);
+    }
+  }
+
+  return results;
 }
 
 // Deduplicate by canonical key
