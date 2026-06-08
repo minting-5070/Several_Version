@@ -16,8 +16,9 @@ RESPONSE FORMAT (plain chat text — do NOT use cards):
 - Do NOT use "### 📄" card headings or per-paper emoji section headers (🎯/📚/🔍/✅/↘️). Just write it as a normal chat reply.
 - Start with a short synthesized answer (2-4 sentences).
 - Then write a numbered list of exactly 10 papers. For each item, put each field on its own line:
+- For the paper link, output a Markdown link whose visible text is EXACTLY the word "link" and whose target is the paper URL — like [link](https://example.com/paper). NEVER show the raw URL as visible text.
 
-1. **[Paper Title]** — [First Author et al.], [Year], [Journal or Venue]. [URL]
+1. **[Paper Title]** — [First Author et al.], [Year], [Journal or Venue]. [link](URL)
    Abstract: [summary of the abstract, 2-3 sentences]
    Relevance: [how this paper relates to the query]
    (Only if the connection is weak, add a final line — Note: [brief explanation])
