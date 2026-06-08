@@ -102,7 +102,7 @@ export async function POST(req: Request) {
   if (projectId) headers['OpenAI-Project'] = projectId;
 
   const requestBodyBase = {
-    model: 'gpt-5-mini',
+    model: 'gpt-5.4-mini',
     text: { format: { type: 'text' } },
     input: formattedInput
   } as const;
@@ -193,7 +193,8 @@ export async function POST(req: Request) {
           logId,
           answerText: outputText,
           answerLength: outputText.length,
-          tsEndIso: new Date().toISOString()
+          tsEndIso: new Date().toISOString(),
+          responseMs: Date.now() - Date.parse(tsStartIso)
         });
       } catch {}
 
@@ -283,7 +284,8 @@ export async function POST(req: Request) {
           logId,
           answerText: answerBuffer,
           answerLength: answerBuffer.length,
-          tsEndIso: new Date().toISOString()
+          tsEndIso: new Date().toISOString(),
+          responseMs: Date.now() - Date.parse(tsStartIso)
         });
       } catch {}
     },

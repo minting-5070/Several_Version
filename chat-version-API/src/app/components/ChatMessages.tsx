@@ -4,6 +4,54 @@ import remarkGfm from 'remark-gfm';
 // @ts-ignore
 import rehypeRaw from 'rehype-raw';
 
+const APP_VERSION = 'chat-version-api';
+
+function getLocal(key: string): string {
+  try {
+    return (typeof window !== 'undefined' && localStorage.getItem(key)) || '';
+  } catch {
+    return '';
+  }
+}
+
+// 사용자가 답변 속 링크를 클릭했는지 추적 (Supabase + GTM). 메인 흐름을 막지 않음.
+function trackLinkClick(url: string, linkText: string, messageId: string) {
+  if (typeof window === 'undefined' || !url) return;
+  try {
+    const sessionId = getLocal('ra_session_id');
+    const prolificId = getLocal('prolific_id');
+    const tsClickIso = new Date().toISOString();
+    const body = JSON.stringify({
+      sessionId,
+      prolificId,
+      appVersion: APP_VERSION,
+      url,
+      linkText: (linkText || '').slice(0, 500),
+      messageId: messageId || '',
+      tsClickIso,
+    });
+    let sent = false;
+    if (navigator.sendBeacon) {
+      sent = navigator.sendBeacon('/api/log-click', body);
+    }
+    if (!sent) {
+      fetch('/api/log-click', { method: 'POST', body, keepalive: true, headers: { 'Content-Type': 'application/json' } }).catch(() => {});
+    }
+    (window as any).dataLayer = (window as any).dataLayer || [];
+    (window as any).dataLayer.push({
+      event: 'link_click',
+      session_id: sessionId,
+      user_id: prolificId || undefined,
+      prolific_id: prolificId || undefined,
+      link_url: url,
+      link_text: (linkText || '').slice(0, 500),
+      message_id: messageId || undefined,
+      app_version: APP_VERSION,
+      timestamp: tsClickIso,
+    });
+  } catch {}
+}
+
 type Props = {
   messages: Message[];
 };
@@ -170,6 +218,7 @@ export default function ChatMessages({ messages }: Props) {
                           className="text-blue-400 hover:text-blue-300 underline"
                           target="_blank"
                           rel="noopener noreferrer"
+                          onClick={(e) => trackLinkClick((e.currentTarget as HTMLAnchorElement).href, e.currentTarget.textContent || '', msg.id)}
                         />
                       ),
                       code: ({ node, ...props }) => (
@@ -202,6 +251,7 @@ export default function ChatMessages({ messages }: Props) {
                               className="text-blue-400 hover:text-blue-300 underline"
                               target="_blank"
                               rel="noopener noreferrer"
+                              onClick={(e) => trackLinkClick((e.currentTarget as HTMLAnchorElement).href, e.currentTarget.textContent || '', msg.id)}
                             />
                           ),
                         }}

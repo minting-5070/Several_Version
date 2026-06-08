@@ -1,5 +1,6 @@
 // Edge runtime provides native fetch
 import { SYSTEM_MESSAGE, SMALL_TALK_MESSAGE } from './system-message';
+import { logChatStart, logChatEnd } from '@/app/api/_lib/server-logger';
 import { ALL_PAPERS, searchPapersByQuery, rankPapersByQuery, type PaperRecord } from '@/data/papers';
 
 export const runtime = 'edge';
@@ -8,6 +9,9 @@ export const dynamic = 'force-dynamic';
 export async function POST(req: Request) {
   const body = await req.json();
   const { messages } = body as { messages: any[] };
+  const sessionId = String((body as any)?.sessionId || '') || '';
+  const prolificId = String((body as any)?.prolificId || '') || '';
+  const appVersion = String((body as any)?.appVersion || 'chat-version');
 
   // 환경변수 디버깅
   const apiKey = process.env.OPENAI_API_KEY;
@@ -106,11 +110,26 @@ export async function POST(req: Request) {
 
   // 요청 바디 공통 부분
   const requestBodyBase = {
-    model: 'gpt-5-mini',
+    model: 'gpt-5.4-mini',
     // Responses API: specify text.format as an object
     text: { format: { type: 'text' } },
     input: formattedInput
   } as const;
+
+  // 분석 로깅: 질문/시작시각 기록 (Supabase 미설정 시 자동 skip)
+  const logId = (globalThis.crypto?.randomUUID?.() || Math.random().toString(36).slice(2)) as string;
+  const tsStartIso = new Date().toISOString();
+  try {
+    await logChatStart({
+      logId,
+      sessionId,
+      prolificId,
+      appVersion,
+      questionText: query,
+      questionLength: query.length,
+      tsStartIso
+    });
+  } catch {}
 
   // 1차: 스트리밍 시도
   const response = await fetch('https://api.openai.com/v1/responses', {
@@ -188,6 +207,16 @@ export async function POST(req: Request) {
 
       const outputText = extractText(data);
 
+      try {
+        await logChatEnd({
+          logId,
+          answerText: outputText,
+          answerLength: outputText.length,
+          tsEndIso: new Date().toISOString(),
+          responseMs: Date.now() - Date.parse(tsStartIso)
+        });
+      } catch {}
+
       return new Response(outputText, {
         status: 200,
         headers: { 'Content-Type': 'text/plain; charset=utf-8' }
@@ -205,6 +234,7 @@ export async function POST(req: Request) {
   const encoder = new TextEncoder();
   const decoder = new TextDecoder();
   let remainder = '';
+  let answerBuffer = '';
 
   const transformStream = new TransformStream({
     transform(chunk, controller) {
@@ -224,15 +254,19 @@ export async function POST(req: Request) {
 
             if (event.type === 'response.output_text.delta' && event.delta) {
               controller.enqueue(encoder.encode(event.delta));
+              answerBuffer += String(event.delta);
             }
             else if (event.delta?.content) {
               controller.enqueue(encoder.encode(event.delta.content));
+              answerBuffer += String(event.delta.content);
             }
             else if (event.content) {
               controller.enqueue(encoder.encode(event.content));
+              answerBuffer += String(event.content);
             }
             else if (event.choices?.[0]?.delta?.content) {
               controller.enqueue(encoder.encode(event.choices[0].delta.content));
+              answerBuffer += String(event.choices[0].delta.content);
             }
 
           } catch {
@@ -248,18 +282,32 @@ export async function POST(req: Request) {
           const event = JSON.parse(remainder.slice(5).trimStart());
           if (event.type === 'response.output_text.delta' && event.delta) {
             controller.enqueue(encoder.encode(event.delta));
+            answerBuffer += String(event.delta);
           }
           else if (event.delta?.content) {
             controller.enqueue(encoder.encode(event.delta.content));
+            answerBuffer += String(event.delta.content);
           }
           else if (event.content) {
             controller.enqueue(encoder.encode(event.content));
+            answerBuffer += String(event.content);
           }
           else if (event.choices?.[0]?.delta?.content) {
             controller.enqueue(encoder.encode(event.choices[0].delta.content));
+            answerBuffer += String(event.choices[0].delta.content);
           }
         } catch {}
       }
+
+      try {
+        void logChatEnd({
+          logId,
+          answerText: answerBuffer,
+          answerLength: answerBuffer.length,
+          tsEndIso: new Date().toISOString(),
+          responseMs: Date.now() - Date.parse(tsStartIso)
+        });
+      } catch {}
     },
   });
 

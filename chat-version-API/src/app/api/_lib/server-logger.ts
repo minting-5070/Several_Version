@@ -139,5 +139,3 @@ export async function logLinkClick(row: LinkClickLog) {
     }
   }
 }
-
-
