@@ -1,7 +1,7 @@
 // Edge runtime provides native fetch
-import { SYSTEM_MESSAGE, SMALL_TALK_MESSAGE } from './system-message';
+import { SYSTEM_MESSAGE, GENERAL_MESSAGE } from './system-message';
 import { logChatStart, logChatEnd } from '@/app/api/_lib/server-logger';
-import { ALL_PAPERS, searchPapersByQuery, rankPapersByQuery, type PaperRecord } from '@/data/papers';
+import { ALL_PAPERS, searchPapersByQuery, rankPapersByQuery, isPaperSearchRequest, type PaperRecord } from '@/data/papers';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -33,18 +33,11 @@ export async function POST(req: Request) {
     }
   }
 
-  // 최신 사용자 쿼리 추출 및 스몰토크 판별
+  // 최신 사용자 쿼리 추출 및 "논문 찾기 요청" 여부 판별
   const latestUser = [...mergedMessages].reverse().find((m: any) => m.role === 'user');
   const query = String(latestUser?.content || '').slice(0, 2000);
-  const q = query.toLowerCase().trim();
-  const isSmallTalk = (
-    q.length <= 80 && (
-      /^\s*(hi|hello|hey|안녕|ㅎㅇ|헬로)\b/.test(q) ||
-      /(who\s+are\s+you|누구|너는\s*누구|what\s+are\s+you)/.test(q) ||
-      /(thanks|thank\s+you|고마워|감사)/.test(q) ||
-      /(bye|goodbye|잘가|감사합니다)/.test(q)
-    )
-  );
+  // 논문을 찾아달라는 요청일 때만 10개 논문 모드, 그 외엔 일반 비서 모드
+  const paperRequest = isPaperSearchRequest(query);
 
   // 로컬 논문 후보 선정
   let candidates = (query ? rankPapersByQuery(query) : []).slice(0, 20);
@@ -54,7 +47,7 @@ export async function POST(req: Request) {
 
   const systemMessage = {
     role: 'system' as const,
-    content: isSmallTalk ? SMALL_TALK_MESSAGE : SYSTEM_MESSAGE
+    content: paperRequest ? SYSTEM_MESSAGE : GENERAL_MESSAGE
   };
 
   const ensureTen = (arr: PaperRecord[]) => {
@@ -66,7 +59,7 @@ export async function POST(req: Request) {
   const selected = ensureTen(candidates);
 
   const formattedInput = (() => {
-    if (!isSmallTalk) {
+    if (paperRequest) {
       const localDbBlock = selected.map((p, i) => (
         `${i + 1}. Title: ${p.title}\nAuthors: ${p.authors}\nYear: ${p.year} • Journal: ${p.journal}\nLink: ${p.link}\nAbstract: ${p.abstract}`
       )).join('\n\n');

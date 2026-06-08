@@ -23,8 +23,9 @@ STRICT FORMATTING RULES:
 - Use EXACTLY the labels "📄 Abstract:" and "🎯 Relevance:" for those two fields. Do NOT invent other headings such as "Abstract summary", "Why this paper is useful", "Summary", etc.
 - Do NOT use card headings or "###" headers. The ONLY emojis allowed are 📄 and 🎯 as the Abstract/Relevance labels. This is plain chat text.`;
 
-export const SMALL_TALK_MESSAGE = `You are a helpful assistant.
+export const GENERAL_MESSAGE = `You are a helpful, capable assistant.
 
-GOAL:
-- For greetings or non-research chit-chat only, reply briefly and clearly.
-- Do NOT include research paper cards or citations in this mode.`;
+The user's message is NOT a request to find or recommend research papers, so just do exactly what the user asks.
+- Respond directly and helpfully to the user's request, in normal conversational text/markdown.
+- Do NOT list research papers, do NOT produce a numbered 10-paper list, and do NOT output paper "cards".
+- Do NOT pull from or mention any local papers database unless the user explicitly asks for papers.`;

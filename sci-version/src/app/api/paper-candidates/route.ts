@@ -1,4 +1,4 @@
-import { ALL_PAPERS, rankPapersByQuery, searchPapersByQuery, type PaperRecord } from '@/data/papers';
+import { ALL_PAPERS, rankPapersByQuery, searchPapersByQuery, isPaperSearchRequest, type PaperRecord } from '@/data/papers';
 
 export const runtime = 'edge';
 
@@ -12,6 +12,11 @@ function ensureTen(arr: PaperRecord[]): PaperRecord[] {
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
   const query = String((body as { query?: string })?.query || '').slice(0, 2000);
+
+  // Not a paper-finding request -> don't populate the card panel.
+  if (!isPaperSearchRequest(query)) {
+    return Response.json({ papers: [] });
+  }
 
   let candidates = (query ? rankPapersByQuery(query) : []).slice(0, 20);
   if (query && candidates.length === 0) {

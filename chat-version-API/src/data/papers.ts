@@ -214,3 +214,48 @@ export function rankPapersByQuery(query: string): PaperRecord[] {
     .sort((a, b) => b.s - a.s);
   return scored.map(x => x.p);
 }
+
+// Decide whether the latest user message is a request to find/recommend papers.
+// When true  -> research mode (synthesized opinion + 10 papers / cards).
+// When false -> general assistant mode (just do exactly what the user asks).
+//
+// This is intentionally biased HEAVILY toward research mode: if there is even a
+// faint research nuance, or if a paper-grounded explanation would be useful, we
+// return true. Only clearly self-contained non-research tasks (translation, code,
+// drafting an email/essay, pure greetings) fall through to general mode.
+export function isPaperSearchRequest(query: string): boolean {
+  const q = (query || '').toLowerCase().trim();
+  if (!q) return false;
+
+  // Any mention of papers / research / evidence => research mode.
+  const paperNouns = /(papers?|stud(?:y|ies)|research|literature|articles?|publications?|citations?|references?|journals?|evidence|findings?|논문|연구|문헌|레퍼런스|자료|선행연구|근거|문헌조사)/;
+  if (paperNouns.test(q)) return true;
+
+  // Pure greetings / small talk (short messages only) => general mode.
+  const smallTalk =
+    q.length <= 50 && (
+      /^\s*(hi|hello|hey|안녕|ㅎㅇ|헬로)\b/.test(q) ||
+      /(who\s+are\s+you|what\s+are\s+you|누구야|너는\s*누구)/.test(q) ||
+      /^(thanks|thank\s+you|고마워|감사합니다|감사해)/.test(q) ||
+      /^(bye|goodbye|잘가)/.test(q)
+    );
+  if (smallTalk) return false;
+
+  // Clearly self-contained, non-research tasks => general mode (do exactly what is asked).
+  const nonPaperTask =
+    // translation / rewriting / proofreading of provided text
+    /\b(translate|paraphrase|rewrite|reword|proofread)\b/.test(q) ||
+    // coding / debugging
+    /\b(debug|refactor|stack\s*trace|compile)\b/.test(q) ||
+    /\bwrite\b[^.?!]*\b(code|script|function|program|query|sql|regex)\b/.test(q) ||
+    // creative / personal writing
+    /\b(write|draft|compose)\b[^.?!]*\b(email|e-mail|essay|poem|story|letter|cover\s*letter|message|tweet|post|caption|resume|cv|song|joke)\b/.test(q) ||
+    // summarize the user's own pasted text (NOT "summarize the research/literature")
+    /(summarize|summarise)\s+(this|the\s+following|my|that)\b/.test(q) ||
+    // Korean self-contained tasks
+    /(번역|다듬어|교정|코드\s*(짜|작성)|프로그램\s*짜|이메일\s*(써|작성)|편지\s*(써|작성)|에세이\s*(써|작성)|시\s*(써|지어)|노래\s*가사)/.test(q);
+  if (nonPaperTask) return false;
+
+  // Default: treat everything else (topics, explanations, questions) as a paper search.
+  return true;
+}

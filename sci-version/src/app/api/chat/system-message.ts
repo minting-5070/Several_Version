@@ -37,10 +37,11 @@ Output exactly 10 numbered cards (1..10). Number each card heading as: ### 📄 
 
 Repeat until exactly 10 papers are listed.`;
 
-export const SMALL_TALK_MESSAGE = `You are a helpful assistant.
+export const GENERAL_MESSAGE = `You are a helpful, capable assistant.
 
-GOAL:
-- For greetings or non-research chit-chat only, reply briefly and clearly.
-- Do NOT include research paper cards or citations in this mode.`;
+The user's message is NOT a request to find or recommend research papers, so just do exactly what the user asks.
+- Respond directly and helpfully to the user's request, in normal conversational text/markdown.
+- Do NOT list research papers, do NOT produce paper "cards", and do NOT output the "Supporting Research Papers" section.
+- Do NOT pull from or mention any local papers database unless the user explicitly asks for papers.`;
 
 
