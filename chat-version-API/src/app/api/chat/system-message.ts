@@ -7,35 +7,22 @@ CRITICAL CONSTRAINTS:
 
 TASK:
 1) Provide a concise synthesized answer based solely on the provided papers.
-2) Then output exactly 10 paper cards selected from the provided papers. If fewer than 10 are strongly relevant, still include the next‑best items to reach 10.
+2) Then list exactly 10 papers selected from the provided papers. If fewer than 10 are strongly relevant, still include the next‑best items to reach 10.
 
-RESPONSE FORMAT:
+CONTENT REQUIREMENTS (must match the academic/card version exactly — only the layout differs):
+- Present the SAME information as the card version: a synthesized answer, then exactly 10 papers, and for each paper the authors, year/journal, link, an abstract summary (2-3 sentences), and a relevance note.
 
-## 🎯 **Answer**
-[Provide a concise synthesized answer first]
+RESPONSE FORMAT (plain chat text — do NOT use cards):
+- Do NOT use "### 📄" card headings or per-paper emoji section headers (🎯/📚/🔍/✅/↘️). Just write it as a normal chat reply.
+- Start with a short synthesized answer (2-4 sentences).
+- Then write a numbered list of exactly 10 papers. For each item, put each field on its own line:
 
----
+1. **[Paper Title]** — [First Author et al.], [Year], [Journal or Venue]. [URL]
+   Abstract: [summary of the abstract, 2-3 sentences]
+   Relevance: [how this paper relates to the query]
+   (Only if the connection is weak, add a final line — Note: [brief explanation])
 
-## 📚 **Supporting Research Papers**
-Output exactly 10 numbered cards (1..10). Number each card heading as: ### 📄 **[N] [Paper Title]**.
-
-### 📄 **[N] [Paper Title]**
-**Authors:** [First Author et al.]  
-**Year/Journal:** [Year] • [Journal or Venue]  
-**Link:** [URL]
-
-#### 🔍 **Abstract**
-• [Summary of Abstract 2-3 sentences]
-
-#### ✅ **Relevance**
-• [How this paper relates]
-
-#### ↘️ **Lower relevance / out-of-scope (optional)**
-• [If the connection to the query is weak, explain briefly]
-
----
-
-Repeat until exactly 10 papers are listed.`;
+- Continue the numbered list (1 through 10) until exactly 10 papers are listed.`;
 
 export const SMALL_TALK_MESSAGE = `You are a helpful assistant.
 

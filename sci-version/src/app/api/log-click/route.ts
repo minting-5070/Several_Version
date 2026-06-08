@@ -17,7 +17,7 @@ export async function POST(req: Request) {
     await logLinkClick({
       sessionId: String(data?.sessionId || ''),
       prolificId: String(data?.prolificId || ''),
-      appVersion: String(data?.appVersion || ''),
+      appVersion: `${String(data?.appVersion || '')}-${(process.env.NEXT_PUBLIC_PAPER_DB || 'high').toLowerCase() === 'low' ? 'low' : 'high'}`,
       url,
       linkText: String(data?.linkText || '').slice(0, 500),
       messageId: String(data?.messageId || ''),

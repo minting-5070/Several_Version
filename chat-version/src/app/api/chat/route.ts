@@ -13,11 +13,9 @@ export async function POST(req: Request) {
   const prolificId = String((body as any)?.prolificId || '') || '';
   const appVersion = String((body as any)?.appVersion || 'chat-version');
 
-  // 환경변수 디버깅
+  // 환경변수 확인
   const apiKey = process.env.OPENAI_API_KEY;
-  console.log('OPENAI_API_KEY exists:', !!apiKey);
-  console.log('OPENAI_API_KEY length:', apiKey?.length || 0);
-  
+
   if (!apiKey) {
     return new Response('OpenAI API key is not configured', {
       status: 200,
@@ -119,12 +117,14 @@ export async function POST(req: Request) {
   // 분석 로깅: 질문/시작시각 기록 (Supabase 미설정 시 자동 skip)
   const logId = (globalThis.crypto?.randomUUID?.() || Math.random().toString(36).slice(2)) as string;
   const tsStartIso = new Date().toISOString();
+  const dbQuality = (process.env.NEXT_PUBLIC_PAPER_DB || 'high').toLowerCase() === 'low' ? 'low' : 'high';
+  const appVersionTagged = `${appVersion}-${dbQuality}`;
   try {
     await logChatStart({
       logId,
       sessionId,
       prolificId,
-      appVersion,
+      appVersion: appVersionTagged,
       questionText: query,
       questionLength: query.length,
       tsStartIso
