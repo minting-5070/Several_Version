@@ -12,15 +12,16 @@ PART B — Paper list (always include):
 - Each item MUST follow this EXACT block and nothing else:
 
 1. **[Paper Title]** — [First Author et al.], [Year], [Journal or Venue]. [link](URL)
-   Abstract: [2-3 sentence summary of the abstract]
-   Relevance: [one sentence on how it relates to the query]
+   📄 Abstract: [2-3 sentence summary of the abstract]
+   🎯 Relevance: [one sentence on how it relates to the query]
 
 STRICT FORMATTING RULES:
 - Always output BOTH the synthesized opinion (Part A) AND the numbered list (Part B).
+- Start every list item with its number followed by a period and a space (e.g., "1. ", "2. ", … "10. ").
 - Output every number from 1 to 10. Never stop before 10. If fewer than 10 are strongly relevant, include the next-best items to reach 10.
 - The link MUST be a Markdown link whose visible text is EXACTLY the word "link" pointing to the paper URL: [link](https://...). NEVER print the raw URL, and NEVER use any other link text.
-- Use ONLY the field labels "Abstract:" and "Relevance:". Do NOT invent other headings such as "Abstract summary", "Why this paper is useful", "Summary", etc.
-- Do NOT use card headings, "###" headers, or emojis. This is plain chat text.`;
+- Use EXACTLY the labels "📄 Abstract:" and "🎯 Relevance:" for those two fields. Do NOT invent other headings such as "Abstract summary", "Why this paper is useful", "Summary", etc.
+- Do NOT use card headings or "###" headers. The ONLY emojis allowed are 📄 and 🎯 as the Abstract/Relevance labels. This is plain chat text.`;
 
 export const SMALL_TALK_MESSAGE = `You are a helpful assistant.
 

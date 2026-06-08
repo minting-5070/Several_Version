@@ -197,10 +197,10 @@ export default function ChatMessages({ messages }: Props) {
                         }`} />
                       ),
                       ul: ({ node, ...props }) => (
-                        <ul {...props} className="mb-3 pl-4 space-y-1" />
+                        <ul {...props} className="list-disc mb-3 pl-6 space-y-1" />
                       ),
                       ol: ({ node, ...props }) => (
-                        <ol {...props} className="mb-3 pl-4 space-y-1" />
+                        <ol {...props} className="list-decimal mb-3 pl-6 space-y-1" />
                       ),
                       li: ({ node, ...props }) => (
                         <li {...props} className={`leading-relaxed ${
