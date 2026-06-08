@@ -1,6 +1,7 @@
 import { Message } from 'ai/react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import remarkBreaks from 'remark-breaks';
 // @ts-ignore
 import rehypeRaw from 'rehype-raw';
 
@@ -173,7 +174,7 @@ export default function ChatMessages({ messages }: Props) {
                     : 'prose-invert prose-headings:text-foreground prose-p:text-foreground prose-li:text-foreground prose-strong:text-foreground'
                 }`}>
                   <ReactMarkdown
-                    remarkPlugins={[remarkGfm]}
+                    remarkPlugins={[remarkGfm, remarkBreaks]}
                     rehypePlugins={rehypeRaw ? [rehypeRaw] : []}
                     components={{
                       h1: ({ node, ...props }) => (
@@ -242,7 +243,7 @@ export default function ChatMessages({ messages }: Props) {
                   {references && (
                     <div className="mt-4">
                       <ReactMarkdown
-                        remarkPlugins={[remarkGfm]}
+                        remarkPlugins={[remarkGfm, remarkBreaks]}
                         rehypePlugins={rehypeRaw ? [rehypeRaw] : []}
                         components={{
                           a: ({ node, ...props }) => (
