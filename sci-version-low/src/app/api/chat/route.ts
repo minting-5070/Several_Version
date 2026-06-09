@@ -1,0 +1,291 @@
+// Edge runtime provides native fetch
+import { SYSTEM_MESSAGE, GENERAL_MESSAGE } from './system-message';
+import { logChatStart, logChatEnd } from '@/app/api/_lib/server-logger';
+import { ALL_PAPERS, searchPapersByQuery, rankPapersByQuery, isPaperSearchRequest, type PaperRecord } from '@/data/papers';
+
+export const runtime = 'edge';
+export const dynamic = 'force-dynamic';
+
+export async function POST(req: Request) {
+  const body = await req.json();
+  const { messages } = body as { messages: any[] };
+  const sessionId = String((body as any)?.sessionId || '') || '';
+  const prolificId = String((body as any)?.prolificId || '') || '';
+  const appVersion = String((body as any)?.appVersion || 'sci-version-low');
+
+  const apiKey = process.env.OPENAI_API_KEY;
+
+  if (!apiKey) {
+    return new Response('OpenAI API key is not configured', {
+      status: 200,
+      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+    });
+  }
+
+  const mergedMessages = [] as typeof messages;
+  for (const msg of messages) {
+    if (mergedMessages.length > 0 && mergedMessages[mergedMessages.length - 1].role === msg.role) {
+      mergedMessages[mergedMessages.length - 1].content += '\n' + msg.content;
+    } else {
+      mergedMessages.push({ ...msg });
+    }
+  }
+
+  const latestUser = [...mergedMessages].reverse().find((m: any) => m.role === 'user');
+  const query = String(latestUser?.content || '').slice(0, 2000);
+  // 논문을 찾아달라는 요청일 때만 종합 의견 + 10개 논문(카드) 모드, 그 외엔 일반 비서 모드
+  const paperRequest = isPaperSearchRequest(query);
+
+  let candidates = (query ? rankPapersByQuery(query) : []).slice(0, 20);
+  if (query && candidates.length === 0) {
+    candidates = searchPapersByQuery(query).slice(0, 20);
+  }
+
+  const systemMessage = {
+    role: 'system' as const,
+    content: paperRequest ? SYSTEM_MESSAGE : GENERAL_MESSAGE
+  };
+
+  const ensureTen = (arr: PaperRecord[]) => {
+    if (arr.length >= 10) return arr.slice(0, 10);
+    const need = 10 - arr.length;
+    const more = ALL_PAPERS.filter((p) => !arr.includes(p)).slice(0, need);
+    return [...arr, ...more].slice(0, 10);
+  };
+  const selected = ensureTen(candidates);
+
+  const formattedInput = (() => {
+    if (paperRequest) {
+      const localDbBlock = selected.map((p, i) => (
+        `${i + 1}. Title: ${p.title}\nAuthors: ${p.authors}\nYear: ${p.year} • Journal: ${p.journal}\nLink: ${p.link}\nAbstract: ${p.abstract}`
+      )).join('\n\n');
+
+      const localDbMessage = {
+        role: 'system' as const,
+        content: `LOCAL PAPERS DATABASE (Top candidates for this query):\n\n${localDbBlock}`
+      };
+
+      return [
+        systemMessage,
+        localDbMessage,
+        ...mergedMessages.map((m: { role: string; content: string }) => ({
+          role: m.role,
+          content: m.content
+        }))
+      ];
+    }
+
+    return [
+      systemMessage,
+      ...mergedMessages.map((m: { role: string; content: string }) => ({
+        role: m.role,
+        content: m.content
+      }))
+    ];
+  })();
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${apiKey}`,
+    'OpenAI-Beta': 'responses=1'
+  };
+  const orgId = process.env.OPENAI_ORG_ID;
+  if (orgId) headers['OpenAI-Organization'] = orgId;
+  const projectId = process.env.OPENAI_PROJECT;
+  if (projectId) headers['OpenAI-Project'] = projectId;
+
+  const requestBodyBase = {
+    model: 'gpt-5.4-mini',
+    text: { format: { type: 'text' } },
+    input: formattedInput
+  } as const;
+
+  const logId = (globalThis.crypto?.randomUUID?.() || Math.random().toString(36).slice(2)) as string;
+  const tsStartIso = new Date().toISOString();
+  try {
+    await logChatStart({
+      logId,
+      sessionId,
+      prolificId,
+      appVersion,
+      questionText: query,
+      questionLength: query.length,
+      tsStartIso
+    });
+  } catch {}
+
+  const response = await fetch('https://api.openai.com/v1/responses', {
+    method: 'POST',
+    headers: { ...headers, 'Accept': 'text/event-stream' },
+    body: JSON.stringify({
+      ...requestBodyBase,
+      stream: true
+    })
+  });
+
+  const extractText = (d: any): string => {
+    try {
+      if (typeof d?.output_text === 'string') return d.output_text;
+      if (Array.isArray(d?.output_text)) return d.output_text.join('');
+
+      if (Array.isArray(d?.output)) {
+        let buf = '';
+        for (const item of d.output) {
+          if (item?.type === 'message' && Array.isArray(item.content)) {
+            for (const block of item.content) {
+              if (typeof block?.text === 'string') buf += block.text;
+              else if (typeof block?.content === 'string') buf += block.content;
+            }
+          } else if (item?.type === 'message' && typeof item?.content === 'string') {
+            buf += item.content;
+          }
+        }
+        if (buf) return buf;
+      }
+
+      if (typeof d?.content === 'string') return d.content;
+      if (d?.choices?.[0]?.message?.content) return d.choices[0].message.content;
+
+      return typeof d === 'string' ? d : JSON.stringify(d);
+    } catch {
+      return typeof d === 'string' ? d : JSON.stringify(d);
+    }
+  };
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    const shouldRetryWithoutStream =
+      errorText.includes('must be verified to stream') ||
+      (errorText.includes('param') && errorText.includes('stream')) ||
+      errorText.includes('unsupported_value');
+
+    if (shouldRetryWithoutStream) {
+      const nonStreamResp = await fetch('https://api.openai.com/v1/responses', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          ...requestBodyBase,
+          stream: false
+        })
+      });
+
+      if (!nonStreamResp.ok) {
+        const nonStreamErr = await nonStreamResp.text();
+        const msg = `Request to OpenAI failed (${nonStreamResp.status}): ${nonStreamErr}`;
+        return new Response(msg, {
+          status: 200,
+          headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+        });
+      }
+
+      const data = await nonStreamResp.json();
+      const outputText = extractText(data);
+
+      try {
+        await logChatEnd({
+          logId,
+          answerText: outputText,
+          answerLength: outputText.length,
+          tsEndIso: new Date().toISOString(),
+          responseMs: Date.now() - Date.parse(tsStartIso)
+        });
+      } catch {}
+
+      return new Response(outputText, {
+        status: 200,
+        headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+      });
+    }
+
+    const msg = `Request to OpenAI failed (${response.status}): ${errorText}`;
+    return new Response(msg, {
+      status: 200,
+      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+    });
+  }
+
+  const encoder = new TextEncoder();
+  const decoder = new TextDecoder();
+  let remainder = '';
+  let answerBuffer = '';
+
+  const transformStream = new TransformStream({
+    transform(chunk, controller) {
+      const text = remainder + decoder.decode(chunk, { stream: true });
+      const parts = text.split('\n');
+      remainder = parts.pop() ?? '';
+
+      for (const line of parts) {
+        if (line.startsWith('data:')) {
+          if (line.trim() === 'data:[DONE]' || line.trim() === 'data: [DONE]') {
+            continue;
+          }
+
+          try {
+            const jsonStr = line.slice(5).trimStart();
+            const event = JSON.parse(jsonStr);
+
+            if (event.type === 'response.output_text.delta' && event.delta) {
+              controller.enqueue(encoder.encode(event.delta));
+              answerBuffer += String(event.delta);
+            }
+            else if (event.delta?.content) {
+              controller.enqueue(encoder.encode(event.delta.content));
+              answerBuffer += String(event.delta.content);
+            }
+            else if (event.content) {
+              controller.enqueue(encoder.encode(event.content));
+              answerBuffer += String(event.content);
+            }
+            else if (event.choices?.[0]?.delta?.content) {
+              controller.enqueue(encoder.encode(event.choices[0].delta.content));
+              answerBuffer += String(event.choices[0].delta.content);
+            }
+
+          } catch {
+            // ignore parse errors
+          }
+        }
+      }
+    },
+
+    flush(controller) {
+      if (remainder.startsWith('data:')) {
+        try {
+          const event = JSON.parse(remainder.slice(5).trimStart());
+          if (event.type === 'response.output_text.delta' && event.delta) {
+            controller.enqueue(encoder.encode(event.delta));
+            answerBuffer += String(event.delta);
+          }
+          else if (event.delta?.content) {
+            controller.enqueue(encoder.encode(event.delta.content));
+            answerBuffer += String(event.delta.content);
+          }
+          else if (event.content) {
+            controller.enqueue(encoder.encode(event.content));
+            answerBuffer += String(event.content);
+          }
+          else if (event.choices?.[0]?.delta?.content) {
+            controller.enqueue(encoder.encode(event.choices[0].delta.content));
+            answerBuffer += String(event.choices[0].delta.content);
+          }
+        } catch {}
+      }
+
+      try {
+        void logChatEnd({
+          logId,
+          answerText: answerBuffer,
+          answerLength: answerBuffer.length,
+          tsEndIso: new Date().toISOString(),
+          responseMs: Date.now() - Date.parse(tsStartIso)
+        });
+      } catch {}
+    },
+  });
+
+  return new Response(response.body?.pipeThrough(transformStream), {
+    status: 200,
+    headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+  });
+}

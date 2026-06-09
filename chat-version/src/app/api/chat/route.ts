@@ -23,6 +23,13 @@ export async function POST(req: Request) {
     });
   }
 
+  if (ALL_PAPERS.length === 0) {
+    return new Response('Paper database failed to load.', {
+      status: 500,
+      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+    });
+  }
+
   // 메시지 병합 로직
   const mergedMessages = [] as typeof messages;
   for (const msg of messages) {
@@ -110,14 +117,12 @@ export async function POST(req: Request) {
   // 분석 로깅: 질문/시작시각 기록 (Supabase 미설정 시 자동 skip)
   const logId = (globalThis.crypto?.randomUUID?.() || Math.random().toString(36).slice(2)) as string;
   const tsStartIso = new Date().toISOString();
-  const dbQuality = (process.env.NEXT_PUBLIC_PAPER_DB || 'high').toLowerCase() === 'low' ? 'low' : 'high';
-  const appVersionTagged = `${appVersion}-${dbQuality}`;
   try {
     await logChatStart({
       logId,
       sessionId,
       prolificId,
-      appVersion: appVersionTagged,
+      appVersion,
       questionText: query,
       questionLength: query.length,
       tsStartIso

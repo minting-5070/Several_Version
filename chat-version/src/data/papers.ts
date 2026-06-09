@@ -1,5 +1,4 @@
 import { RAW_HIGH } from './raw-high';
-import { RAW_LOW } from './raw-low';
 
 export type PaperRecord = {
   id: string;
@@ -11,10 +10,8 @@ export type PaperRecord = {
   abstract: string;
 };
 
-// DB quality is fixed per deployment via NEXT_PUBLIC_PAPER_DB ('high' | 'low').
-// Defaults to the high-quality database when unset.
-const PAPER_DB = (process.env.NEXT_PUBLIC_PAPER_DB || 'high').toLowerCase();
-export const PASTED_ENTRIES_RAW: string = PAPER_DB === 'low' ? RAW_LOW : RAW_HIGH;
+// High-quality paper database (fixed for this app folder).
+export const PASTED_ENTRIES_RAW: string = RAW_HIGH;
 
 // Normalize various publisher/portal URLs to a canonical key so that
 // the same paper (e.g., Wiley abs/full, Science abs/doi) dedupes cleanly.

@@ -102,14 +102,12 @@ export async function POST(req: Request) {
 
   const logId = (globalThis.crypto?.randomUUID?.() || Math.random().toString(36).slice(2)) as string;
   const tsStartIso = new Date().toISOString();
-  const dbQuality = (process.env.NEXT_PUBLIC_PAPER_DB || 'high').toLowerCase() === 'low' ? 'low' : 'high';
-  const appVersionTagged = `${appVersion}-${dbQuality}`;
   try {
     await logChatStart({
       logId,
       sessionId,
       prolificId,
-      appVersion: appVersionTagged,
+      appVersion,
       questionText: query,
       questionLength: query.length,
       tsStartIso

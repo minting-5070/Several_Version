@@ -248,5 +248,4 @@ Bick, A., Blandin, A., & Deming, D. J. (2026). The rapid adoption of generative 
 Generative artificial intelligence (genAI) is a potentially important new technology, but its impact on the economy depends on the speed and intensity of adoption. This paper reports results from a series of nationally representative U.S. surveys of genAI use at work and at home. As of late 2024, 45% of the U.S. population age 18–64 uses genAI. Among employed respondents, 27% used genAI for work at least once in the previous week: 10% used it every workday and 17% on some but not all workdays.
 
 https://pubsonline.informs.org/doi/10.1287/mnsc.2025.02523
-
-`
+`;
