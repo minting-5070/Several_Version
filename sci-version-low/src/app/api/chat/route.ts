@@ -249,7 +249,7 @@ export async function POST(req: Request) {
       }
     },
 
-    flush(controller) {
+    async flush(controller) {
       if (remainder.startsWith('data:')) {
         try {
           const event = JSON.parse(remainder.slice(5).trimStart());
@@ -273,7 +273,8 @@ export async function POST(req: Request) {
       }
 
       try {
-        void logChatEnd({
+        // Must await: Edge runtime kills pending requests once the stream closes.
+        await logChatEnd({
           logId,
           answerText: answerBuffer,
           answerLength: answerBuffer.length,
