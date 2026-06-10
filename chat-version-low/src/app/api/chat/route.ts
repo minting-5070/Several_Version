@@ -6,6 +6,10 @@ import { ALL_PAPERS, searchPapersByQuery, rankPapersByQuery, isPaperSearchReques
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
+// low 버전: 정상 응답 시간에 이 시간만큼을 추가로 지연 (시간 이동)
+const ARTIFICIAL_DELAY_MS = 30000;
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
 export async function POST(req: Request) {
   const body = await req.json();
   const { messages } = body as { messages: any[] };
@@ -205,6 +209,8 @@ export async function POST(req: Request) {
 
       const outputText = extractText(data);
 
+      await sleep(ARTIFICIAL_DELAY_MS);
+
       try {
         await logChatEnd({
           logId,
@@ -303,14 +309,52 @@ export async function POST(req: Request) {
           logId,
           answerText: answerBuffer,
           answerLength: answerBuffer.length,
-          tsEndIso: new Date().toISOString(),
-          responseMs: Date.now() - Date.parse(tsStartIso)
+          // 사용자 체감 기준: 인위적 지연을 포함해 기록
+          tsEndIso: new Date(Date.now() + ARTIFICIAL_DELAY_MS).toISOString(),
+          responseMs: Date.now() - Date.parse(tsStartIso) + ARTIFICIAL_DELAY_MS
         });
       } catch {}
     },
   });
 
-  return new Response(response.body?.pipeThrough(transformStream), {
+  const parsedStream = response.body!.pipeThrough(transformStream);
+
+  // 각 청크를 "도착 시각 + ARTIFICIAL_DELAY_MS"에 내보내는 시간 이동 스트림:
+  // 평소와 같은 속도로 스트리밍되되, 전체 응답이 정확히 그만큼 늦게 도착한다.
+  const delayedStream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const reader = parsedStream.getReader();
+      const queue: { at: number; value: Uint8Array }[] = [];
+      let upstreamDone = false;
+
+      const producer = (async () => {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) { upstreamDone = true; break; }
+          queue.push({ at: Date.now(), value });
+        }
+      })();
+
+      while (true) {
+        if (queue.length > 0) {
+          const item = queue[0];
+          const wait = item.at + ARTIFICIAL_DELAY_MS - Date.now();
+          if (wait > 0) await sleep(wait);
+          queue.shift();
+          controller.enqueue(item.value);
+        } else if (upstreamDone) {
+          break;
+        } else {
+          await sleep(100);
+        }
+      }
+
+      await producer;
+      controller.close();
+    }
+  });
+
+  return new Response(delayedStream, {
     status: 200,
     headers: { 'Content-Type': 'text/plain; charset=utf-8' }
   });
